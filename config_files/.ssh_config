@@ -1,0 +1,11 @@
+Host pi1
+User hadoop
+Hostname 192.168.35.11 
+
+Host pi2
+User hadoop
+Hostname 192.168.35.12
+
+Host pi3
+User hadoop
+Hostname 192.168.35.13
