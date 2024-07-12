@@ -9,3 +9,8 @@ Hostname 192.168.35.12
 Host pi3
 User hadoop
 Hostname 192.168.35.13
+
+# Template for ~/.ssh/config file
+# Host {YOUR_HOSTNAME}
+# User {USER_NAME}  
+# Hostname {IP_ADDRESS}
