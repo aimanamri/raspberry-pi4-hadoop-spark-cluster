@@ -98,8 +98,17 @@ sudo chmod 700 ~/.ssh/
 sudo chmod 600 ~/.ssh/*
 ```
 
-1. **SSH Aliases**<br>
-   On master node, `pi1` while logging as `hadoop` user:
+1. **Public/Private Key Pair**<br>
+    Next, create an SSH key pair on the Pi using:
+```bash
+ssh-keygen -t rsa -b 4096
+```
+When generating this key, leave the password field blank so your Hadoop user can communicate unprompted.
+
+2. Repeat SSH keygen on other nodes `pi2` and `pi3` while logging as `hadoop` user.
+
+3. **SSH Aliases**<br>
+   On every Pi, while logging as `hadoop` user: <br>
    Edit SSH config file using command below. Then, add all of the nodes to the config file, including the Host, User, and Hostname for each Pi.
 ```bash
 nano ~/.ssh/config
@@ -118,15 +127,6 @@ Host pi3
 User hadoop
 Hostname 192.168.35.13
 ```
-2. **Public/Private Key Pair**<br>
-    Next, create an SSH key pair on the Pi using:
-```bash
-ssh-keygen -t rsa -b 4096
-```
-When generating this key, leave the password field blank so your Hadoop user can communicate unprompted.
-
-3. Repeat SSH keygen on other nodes `pi2` and `pi3` while logging as `hadoop` user.
-
 4. Then use the following command on all Pis (including `pi1`) to copy the public keys into `pi1`'s authorized key list:
 ```bash
 ssh-copy-id pi1
@@ -136,15 +136,19 @@ ssh-copy-id pi1
 ```bash
 scp ~/.ssh/authorized_keys piX:~/.ssh/authorized_keys
 ```
-```bash
-scp ~/.ssh/config piX:~/.ssh/config
-```
-Now, we can SSH into/from any Pis without entering any password. Please double check this if it is working properly. <br>
+
+Now, we can SSH into any Pis from master without entering any password. Please double check this if it is working properly. <br>
+
 #### Java 8 Installation
+**\*\*Perform these steps on the master Pi until only until directed to do otherwise.\*\***<br>
 To install Java 8, download the tar package from the official website of Oracle. The OpenJDK-8 is an older version so it is not available in the Debian repository. [See more.](https://itslinuxfoss.com/install-openjdk-8-debian-12/)
 
-**DOWNLOAD LINK (Linux ARM64 Compressed Archive) :** https://www.oracle.com/java/technologies/javase/javase8u211-later-archive-downloads.html#license-lightbox
-
+**DOWNLOAD LINK (Linux ARM64 Compressed Archive) :** https://www.oracle.com/java/technologies/javase/javase8u211-later-archive-downloads.html#license-lightbox <br>
+Then, copy the tar package to worker nodes. (*piX* below refer to `pi2` , `pi3`)
+```bash
+scp .\jdk-8u401-linux-aarch64.tar.gz piX:~/
+```
+Repeat the steps below on each Pi.<br>
 1. Run the following commands after downloading the tar package:
 ```bash
 sudo mkdir /usr/lib/jvm/
