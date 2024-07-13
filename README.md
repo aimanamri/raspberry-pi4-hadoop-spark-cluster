@@ -21,7 +21,7 @@
 </p>
 
 # Build Raspberry Pi 4 Hadoop/Spark Cluster
-Last updated : 14/7/2024 00:15 GMT+8 <br>
+Last updated : 14/7/2024 01:39 GMT+8 <br>
 Author : [Aiman Amri](https://www.linkedin.com/in/aiman-amri/)<br>
 Config files: https://github.com/aimanamri/raspberry-pi4-hadoop-spark-cluster/tree/main/config_files
 
@@ -29,11 +29,13 @@ Config files: https://github.com/aimanamri/raspberry-pi4-hadoop-spark-cluster/tr
 ## Project Introduction
 This project serves as my self-documentation of learning distributed data storage, parallel processing, and Linux OS using Apache Hadoop, Apache Spark and Raspbian OS.
 
-In this project, we'll be setup 3-node cluster using Raspberry Pi 4, install HDFS and run Spark processing jobs via YARN. Furthermore, we can horizontally scale up in the future to add more computing nodes.
+In this project, we'll be setup 3-node cluster using Raspberry Pi 4, install HDFS and run Spark processing jobs via YARN. Furthermore, we can horizontally scale up in the future to add more computing nodes.<br><br>
+Although Hadoop provides MapReduce for processing, we won't cover that in this project. Instead, we will be more focusing on Spark because Spark is faster these days and easier to work with.
 
-1. **Hadoop Distributed File System (HDFS)**: I’ve utilized HDFS as the distributed storage solution, enabling efficient data management across multiple nodes.
+1. **Hadoop Distributed File System (HDFS)**: HDFS as the distributed storage solution, enabling efficient data management across multiple nodes.
 2. **Hadoop YARN**: YARN acts as the resource manager, ensuring optimal allocation of computing resources for Hadoop and Spark jobs.
-3. **Spark on YARN**: Instead of running Spark jobs in standalone mode, I've used Spark with YARN.
+3. **Spark** : Distributed processing system used for big data workloads and it utilizes in-memory caching. APIs in Java, Scala, Python and R.
+4. **Spark on YARN**: Instead of running Spark jobs in standalone mode, I've used Spark with YARN.
 
 ## Requirements
 To replicate this project, you’ll need the following:
@@ -116,8 +118,8 @@ su - hadoop
 **\*\*FROM HERE, MAKE SURE THAT YOU ARE LOGGED IN AS `hadoop` USER WHEN RUNNING ALL THE COMMANDS\*\***<br>
 
 #### Setup Password-less SSH Authentication<br>
-**\*\*Perform these steps on the master Pi until only until directed to do otherwise.\*\***<br>
-The  master node, `pi1` will use an SSH connection to connect to other nodes (`pi2`,`pi3`) with key-pair authentication. This will allow the master node to actively manage the cluster.
+The  master node, `pi1` will use an SSH connection to connect to other nodes (`pi2`,`pi3`) with key-pair authentication. This will allow the master node to actively manage the cluster.<br>
+**\*\*Perform these steps on the master Pi until only until directed to do otherwise.\*\***
 
 0. **Create SSH Directory (`~/.ssh`) if not exist and set suitable permission accordingly.** 
 ```bash
@@ -138,7 +140,7 @@ When generating this key, leave the password field blank so your Hadoop user can
 
 3. **SSH Aliases**<br>
    On every Pi, while logging as `hadoop` user: <br>
-   Edit SSH config file using command below. Then, add all of the nodes to the config file, including the Host, User, and Hostname for each Pi.
+   Edit SSH config file using command below. 
 ```bash
 nano ~/.ssh/config
 ```
@@ -203,11 +205,11 @@ export JAVA_HOME=/usr/lib/jvm/jdk1.8.0_401/
 ```bash
 source /etc/profile.d/java.sh
 ```
-5. Then, run the following to check Java installation path which known as `JAVA_HOME`.
+5. Then, run the following to check Java installation path, `JAVA_HOME`:
 ```bash
 echo $JAVA_HOME
 ```
-
+Java 8 is completed!
 
 ---
 ## Hadoop 3.4.0 Installation 
