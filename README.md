@@ -21,7 +21,7 @@
 </p>
 
 # Build Raspberry Pi 4 Hadoop/Spark Cluster
-Last updated : 14/7/2024 01:39 GMT+8 <br>
+Last updated : 14/7/2024 01:47 GMT+8 <br>
 Author : [Aiman Amri](https://www.linkedin.com/in/aiman-amri/)<br>
 Config files: https://github.com/aimanamri/raspberry-pi4-hadoop-spark-cluster/tree/main/config_files
 
@@ -35,7 +35,7 @@ Although Hadoop provides MapReduce for processing, we won't cover that in this p
 1. **Hadoop Distributed File System (HDFS)**: HDFS as the distributed storage solution, enabling efficient data management across multiple nodes.
 2. **Hadoop YARN**: YARN acts as the resource manager, ensuring optimal allocation of computing resources for Hadoop and Spark jobs.
 3. **Spark** : Distributed processing system used for big data workloads and it utilizes in-memory caching. APIs in Java, Scala, Python and R.
-4. **Spark on YARN**: Instead of running Spark jobs in standalone mode, I've used Spark with YARN.
+4. **Spark on YARN**: Instead of running Spark jobs in standalone mode, Spark application can be launched in cluster mode or client mode with YARN.
 
 ## Requirements
 To replicate this project, you’ll need the following:
