@@ -21,7 +21,7 @@
 </p>
 
 # Build Raspberry Pi 4 Hadoop/Spark Cluster
-Last updated : 13/7/2024 23:54 GMT+8
+Last updated : 13/7/2024 23:58 GMT+8
 
 ---
 ## Project Introduction
@@ -40,6 +40,7 @@ To replicate this project, you’ll need the following:
 3. **Java 8**: Ensure Java 8 or 11 (runtime) is installed on your Raspberry Pi servers.
 4. **Raspberry Pi 4**: Here, we're setup 3-node cluster, so we’ll need three [Raspberry Pi 4](https://docs.rs-online.com/b1fb/0900766b816fa153.pdf) devices, each with its power supply (5V/3A DC or 5.1V/ 3A DC minimum).
 5. **Ethernet Cables** (if using wired connections)
+6. **Micro SD card and Micro SD card reader**
 
 ## Sources 
 [1] [How to Install and Set Up a 3-Node Hadoop Cluster](https://www.linode.com/docs/guides/how-to-install-and-set-up-hadoop-cluster/)<br>
