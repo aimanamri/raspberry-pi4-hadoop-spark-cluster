@@ -21,7 +21,9 @@
 </p>
 
 # Build Raspberry Pi 4 Hadoop/Spark Cluster
-Last updated : 13/7/2024 23:58 GMT+8
+Last updated : 14/7/2024 00:15 GMT+8 <br>
+Author : [Aiman Amri](https://www.linkedin.com/in/aiman-amri/)<br>
+Config files: https://github.com/aimanamri/raspberry-pi4-hadoop-spark-cluster/tree/main/config_files
 
 ---
 ## Project Introduction
@@ -90,9 +92,10 @@ sudo raspi-config --expand-rootfs
 sudo reboot now
 ```
 #### Configure Static IP
-**\*\*The following steps will need to be done on each Pi.\*\***<br>
 Static IP addresses are required. Here in this project, I assigned them on my home router. I am using `192.168.35.XX` (usually home network is `192.168.0.XX`) . Alternatively, you may assign them by editing `/etc/network/interfaces` file.
+
 #### Configure Hostname/Host file
+**\*\*The following steps will need to be done on each Pi.\*\***<br>
 For hostname, I've already set it up during flashing the OS into the Pi. Alternatively, you can edit `/etc/hostname` file and then reboot.
 
 For each node to communicate with each other by name, edit the `/etc/hosts` file to add the IP addresses of the three Raspberry Pi. Make sure to delete the localhost 127.0.0.1 line from the file.
