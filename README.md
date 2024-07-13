@@ -1,5 +1,27 @@
+<p align="center">
+  <a href="https://github.com/aimanamri/raspberry-pi4-hadoop-spark-cluster">
+    <img alt="GitHub Language Count" src="https://img.shields.io/github/languages/count/aimanamri/raspberry-pi4-hadoop-spark-cluster">
+  </a>
+
+  <a href="https://github.com/aimanamri/raspberry-pi4-hadoop-spark-cluster">
+    <img alt="GitHub Top Language" src="https://img.shields.io/github/languages/top/aimanamri/raspberry-pi4-hadoop-spark-cluster">
+  </a>
+  
+  <a href="https://github.com/aimanamri/raspberry-pi4-hadoop-spark-cluster/stargazers">
+    <img alt="GitHub Stars" src="https://img.shields.io/github/stars/aimanamri/raspberry-pi4-hadoop-spark-cluster?style=social">
+  </a>
+
+  <a href="https://github.com/aimanamri/raspberry-pi4-hadoop-spark-cluster/commits/main">
+    <img alt="GitHub Last Commit" src="https://img.shields.io/github/last-commit/aimanamri/raspberry-pi4-hadoop-spark-cluster">
+  </a>
+
+  <a href="https://github.com/aimanamri/raspberry-pi4-hadoop-spark-cluster">
+    <img alt="Repository Size" src="https://img.shields.io/github/repo-size/aimanamri/raspberry-pi4-hadoop-spark-cluster">
+  </a>
+</p>
+
 # Build Raspberry Pi 4 Hadoop/Spark Cluster
-Last updated : 12/7/2024 19:20 GMT+8
+Last updated : 13/7/2024 23:54 GMT+8
 
 ---
 ## Project Introduction
