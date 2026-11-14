@@ -1,127 +1,176 @@
+<div align="center">
+
+<img src="./assets/hero.gif" alt="Pixel art animation. A person sends a job from a laptop to a Raspberry Pi master node. The master splits the job across two worker Pis. The workers process the data and send the result back." width="100%" />
+
+# Raspberry Pi 4 Hadoop and Spark Cluster
+
+**Build a 3-node big data cluster at home. Store data with HDFS. Process data with Spark on YARN.**
+
+<a href="https://github.com/aimanamri/raspberry-pi4-hadoop-spark-cluster"><img alt="GitHub Language Count" src="https://img.shields.io/github/languages/count/aimanamri/raspberry-pi4-hadoop-spark-cluster"></a>
+<a href="https://github.com/aimanamri/raspberry-pi4-hadoop-spark-cluster"><img alt="GitHub Top Language" src="https://img.shields.io/github/languages/top/aimanamri/raspberry-pi4-hadoop-spark-cluster"></a>
+<a href="https://github.com/aimanamri/raspberry-pi4-hadoop-spark-cluster/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/aimanamri/raspberry-pi4-hadoop-spark-cluster?style=social"></a>
+<a href="https://github.com/aimanamri/raspberry-pi4-hadoop-spark-cluster/commits/main"><img alt="GitHub Last Commit" src="https://img.shields.io/github/last-commit/aimanamri/raspberry-pi4-hadoop-spark-cluster"></a>
+<a href="https://github.com/aimanamri/raspberry-pi4-hadoop-spark-cluster"><img alt="Repository Size" src="https://img.shields.io/github/repo-size/aimanamri/raspberry-pi4-hadoop-spark-cluster"></a>
+
+Author: [Aiman Amri](https://www.linkedin.com/in/aiman-amri/) · Last updated: 14/7/2024 01:47 GMT+8 · [Config files](https://github.com/aimanamri/raspberry-pi4-hadoop-spark-cluster/tree/main/config_files)
+
+</div>
+
+---
+
+## Contents
+
+1. [Overview](#overview)
+2. [What you need](#what-you-need)
+3. [Cluster plan](#cluster-plan)
+4. [Part 1: Prepare the Raspberry Pis](#part-1-prepare-the-raspberry-pis)
+5. [Part 2: Install Java 8](#part-2-install-java-8)
+6. [Part 3: Install and configure Hadoop 3.4.0](#part-3-install-and-configure-hadoop-340)
+7. [Part 4: Start HDFS and YARN](#part-4-start-hdfs-and-yarn)
+8. [Part 5: Install and configure Spark 3.5.1](#part-5-install-and-configure-spark-351)
+9. [Part 6: Run Spark jobs](#part-6-run-spark-jobs)
+10. [Quick reference](#quick-reference)
+11. [Sources and more information](#sources-and-more-information)
+
+---
+
+## Overview
+
+This project is my own record of learning distributed data storage, parallel processing and Linux. It uses Apache Hadoop, Apache Spark and Raspberry Pi OS.
+
+You build a cluster of three Raspberry Pi 4 computers. You install HDFS on the cluster. You run Spark jobs through YARN. You can add more nodes later to make the cluster larger.
+
+This guide does not use MapReduce, the Hadoop processing engine. It uses Spark, because Spark is faster and easier to use.
+
 <p align="center">
-  <a href="https://github.com/aimanamri/raspberry-pi4-hadoop-spark-cluster">
-    <img alt="GitHub Language Count" src="https://img.shields.io/github/languages/count/aimanamri/raspberry-pi4-hadoop-spark-cluster">
-  </a>
-
-  <a href="https://github.com/aimanamri/raspberry-pi4-hadoop-spark-cluster">
-    <img alt="GitHub Top Language" src="https://img.shields.io/github/languages/top/aimanamri/raspberry-pi4-hadoop-spark-cluster">
-  </a>
-  
-  <a href="https://github.com/aimanamri/raspberry-pi4-hadoop-spark-cluster/stargazers">
-    <img alt="GitHub Stars" src="https://img.shields.io/github/stars/aimanamri/raspberry-pi4-hadoop-spark-cluster?style=social">
-  </a>
-
-  <a href="https://github.com/aimanamri/raspberry-pi4-hadoop-spark-cluster/commits/main">
-    <img alt="GitHub Last Commit" src="https://img.shields.io/github/last-commit/aimanamri/raspberry-pi4-hadoop-spark-cluster">
-  </a>
-
-  <a href="https://github.com/aimanamri/raspberry-pi4-hadoop-spark-cluster">
-    <img alt="Repository Size" src="https://img.shields.io/github/repo-size/aimanamri/raspberry-pi4-hadoop-spark-cluster">
-  </a>
+  <img src="./assets/dataflow.gif" alt="Pixel art animation. A data file is split into blocks. The blocks go to three Raspberry Pi nodes and each block is copied to a second node. Each node processes its blocks and shows a partial result. The partial results join into one result." width="100%" />
 </p>
 
-# Build Raspberry Pi 4 Hadoop/Spark Cluster
-Last updated : 14/7/2024 01:47 GMT+8 <br>
-Author : [Aiman Amri](https://www.linkedin.com/in/aiman-amri/)<br>
-Config files: https://github.com/aimanamri/raspberry-pi4-hadoop-spark-cluster/tree/main/config_files
+| Component | Role in the cluster |
+| --- | --- |
+| **HDFS** (Hadoop Distributed File System) | Stores data across all nodes. |
+| **YARN** | Gives CPU and memory to Hadoop jobs and Spark jobs. |
+| **Spark** | Processes large data sets in parallel. It keeps data in memory. It has APIs for Java, Scala, Python and R. |
+| **Spark on YARN** | Runs Spark jobs on the cluster. You start a job in cluster mode or client mode. You do not use standalone mode. |
+
+## What you need
+
+| Item | Details |
+| --- | --- |
+| **Raspberry Pi 4** | 3 units. See the [data sheet](https://docs.rs-online.com/b1fb/0900766b816fa153.pdf). Each Pi needs its own power supply (minimum 5 V / 3 A DC or 5.1 V / 3 A DC). |
+| **Micro SD card** | 1 card for each Pi. You also need a micro SD card reader. |
+| **Ethernet cables** | Optional. Use them if you want a wired network. |
+| **Hadoop** | Version 3.4.0 |
+| **Spark** | Version 3.5.1 |
+| **Java** | Java 8 on each Pi. Java 8 or 11 (runtime) works. |
+
+## Cluster plan
+
+This guide uses the names, addresses and ports in the tables below. If you use other values, change them in each step.
+
+| Host name | Role | IP address | Daemons |
+| --- | --- | --- | --- |
+| `pi1` | Master | `192.168.35.11` | NameNode, SecondaryNameNode, ResourceManager |
+| `pi2` | Worker | `192.168.35.12` | DataNode, NodeManager |
+| `pi3` | Worker | `192.168.35.13` | DataNode, NodeManager |
+
+| Service | Address |
+| --- | --- |
+| HDFS NameNode | `hdfs://pi1:9000` |
+| HDFS web UI | http://pi1:9870 |
+| YARN web UI | http://pi1:8088 |
+| Spark History Server | http://pi1:18080 |
 
 ---
-## Project Introduction
-This project serves as my self-documentation of learning distributed data storage, parallel processing, and Linux OS using Apache Hadoop, Apache Spark and Raspbian OS.
 
-In this project, we'll be setup 3-node cluster using Raspberry Pi 4, install HDFS and run Spark processing jobs via YARN. Furthermore, we can horizontally scale up in the future to add more computing nodes.<br><br>
-Although Hadoop provides MapReduce for processing, we won't cover that in this project. Instead, we will be more focusing on Spark because Spark is faster these days and easier to work with.
+## Part 1: Prepare the Raspberry Pis
 
-1. **Hadoop Distributed File System (HDFS)**: HDFS as the distributed storage solution, enabling efficient data management across multiple nodes.
-2. **Hadoop YARN**: YARN acts as the resource manager, ensuring optimal allocation of computing resources for Hadoop and Spark jobs.
-3. **Spark** : Distributed processing system used for big data workloads and it utilizes in-memory caching. APIs in Java, Scala, Python and R.
-4. **Spark on YARN**: Instead of running Spark jobs in standalone mode, Spark application can be launched in cluster mode or client mode with YARN.
+### 1.1 Build the hardware
+Put all Pis in a rack made for Pis. Connect the power supplies to turn the Pis on.
 
-## Requirements
-To replicate this project, you’ll need the following:
-1. **Hadoop 3.4.0**: Install Hadoop to set up your distributed environment.
-2. **Spark 3.5.1**: Install the latest version of Spark.
-3. **Java 8**: Ensure Java 8 or 11 (runtime) is installed on your Raspberry Pi servers.
-4. **Raspberry Pi 4**: Here, we're setup 3-node cluster, so we’ll need three [Raspberry Pi 4](https://docs.rs-online.com/b1fb/0900766b816fa153.pdf) devices, each with its power supply (5V/3A DC or 5.1V/ 3A DC minimum).
-5. **Ethernet Cables** (if using wired connections)
-6. **Micro SD card and Micro SD card reader**
-
-## Sources 
-[1] [How to Install and Set Up a 3-Node Hadoop Cluster](https://www.linode.com/docs/guides/how-to-install-and-set-up-hadoop-cluster/)<br>
-[2] [Running Spark on Top of a Hadoop YARN Cluster](https://www.linode.com/docs/guides/install-configure-run-spark-on-top-of-hadoop-yarn-cluster/)<br>
-[3] [Apache Hadoop Documentation](https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-common/ClusterSetup.html)<br>
-[4] [Apache Spark Documentation](https://spark.apache.org/docs/latest/)<br>
-[5] [Building a Raspberry Pi Hadoop / Spark Cluster](https://dev.to/awwsmm/building-a-raspberry-pi-hadoop-spark-cluster-8b2?fbclid=IwAR1jloBA6-6U3LhcxhkLT0Kq2Nx90YZjnCCIfT01SQSRs3mHHB87kt4AK4w)<br>
-[6] [Getting Started with Hadoop & Apache Spark](https://youtube.com/playlist?list=PLJlKGwy-7Ac6ASmzZPjonzYsV4vPELf0x&si=IWXPkhC_r7mNN7IX)<br>
-[7] [How to install hadoop cluster/multi node on ubuntu server 18.04](https://youtu.be/zGP0Uqm0SAo)<br>
-[8] [Hadoop : Capacity Scheduler](https://hadoop.apache.org/docs/stable/hadoop-yarn/hadoop-yarn-site/CapacityScheduler.html#:~:text=etc%2Fhadoop%2Fcapacity%2Dscheduler,children%20of%20the%20root%20queue.)<br>
-
----
-
-## Physical Cluster Setup
-Stack all the Pis into a rack specialized for them. Plug in the power supply to turn it on. 
 <p float="right">
   <img src="./img/pi-cluster-1.jpg" width="350" /> 
   <img src="./img/pi-cluster-2.jpg" width="350" /> 
   <img src="./img/pi-cluster-3.jpg" width="705" /> 
 </p>
 
-## Raspberry Pi Initial Setting
-1. **Installing OS**<br>
-I went with **Raspberry Pi OS with desktop** for the master Pi, which has a GUI, and **Raspberry Pi OS Lite** for the worker Pis, which only have a CLI. Then, use the [Raspberry Pi Imager](https://www.raspberrypi.com/software/) to write the **Raspberry Pi OS 64 Bit** to each Pi. 
+### 1.2 Install the operating system
+Use **Raspberry Pi OS with desktop** (it has a GUI) on the master Pi. Use **Raspberry Pi OS Lite** (it has only a CLI) on the worker Pis. Use the [Raspberry Pi Imager](https://www.raspberrypi.com/software/) to write **Raspberry Pi OS 64 Bit** to each SD card.
 
 <p float="right">
   <img src="./img/RaspbianOS.png" width="350" />
   <img src="./img/RaspbianOSLite.png" width="350" /> 
 </p>
 
-2. **Configuring host name,SSH and network connection**<br>
-I've set host name and SSH credential in each Pi. For network connection, I used Wi-Fi. If you are using wired connection, you can skip the Wi-Fi setup.<br>
-However, it is preferable to use wired connection for stabilibility especially during transferring the files across Pis.
+### 1.3 Set the host name, SSH and network
+In the Imager, set the host name and the SSH login on each Pi. This guide uses Wi-Fi. If you use a wired network, do not set up Wi-Fi.
+
+> [!TIP]
+> A wired network is more stable. Use it if you can, especially when you copy large files between the Pis.
+
   <img  src="./img/OSCustomisation_prompt.png" width="400" />
 <p float="right">
   <img src="./img/OSCustomisation_general.png" width="350" /> 
   <img src="./img/OSCustomisation_services.png" width="350" /> 
 </p>
 
-### Basic Pi Configurations
-#### Update packages, expand file system, then reboot.
-**\*\*The following steps will need to be done on each Pi.\*\***
+### 1.4 Update the system
+
+> [!IMPORTANT]
+> Do these steps on **each** Pi.
+
+Update the packages, expand the file system and restart the Pi.
 ```bash
 sudo apt update
 sudo apt upgrade -y
 sudo raspi-config --expand-rootfs
 sudo reboot now
 ```
-#### Configure Static IP
-Static IP addresses are required. Here in this project, I assigned them on my home router. I am using `192.168.35.XX` (usually home network is `192.168.0.XX`) . Alternatively, you may assign them by editing `/etc/network/interfaces` file.
 
-#### Configure Hostname/Host file
-**\*\*The following steps will need to be done on each Pi.\*\***<br>
-For hostname, I've already set it up during flashing the OS into the Pi. Alternatively, you can edit `/etc/hostname` file and then reboot.
+### 1.5 Set a static IP address
+Each Pi needs a static IP address. In this project, I set the addresses on my home router. I use `192.168.35.XX`. A home network is usually `192.168.0.XX`.
 
-For each node to communicate with each other by name, edit the `/etc/hosts` file to add the IP addresses of the three Raspberry Pi. Make sure to delete the localhost 127.0.0.1 line from the file.
+You can also set the addresses in the `/etc/network/interfaces` file.
+
+### 1.6 Set the host names
+
+> [!IMPORTANT]
+> Do these steps on **each** Pi.
+
+I set the host name when I wrote the OS to the SD card. You can also edit the `/etc/hostname` file and restart the Pi.
+
+The Pis must find each other by name. Edit the `/etc/hosts` file and add the IP address of each of the three Pis. Delete the `127.0.0.1` localhost line from the file.
+
 File: `/etc/hosts`
 ```
 192.168.35.11    pi1
 192.168.35.12    pi2
 192.168.35.13    pi3
 ```
-#### Create Hadoop user and then log in as `hadoop` user 
-**\*\*The following steps will need to be done on each Pi.\*\***
+
+### 1.7 Create the `hadoop` user
+
+> [!IMPORTANT]
+> Do these steps on **each** Pi.
+
+Create the user and log in as that user.
 ```bash
 sudo adduser hadoop
 sudo usermod -aG sudo hadoop
 su - hadoop
 ```
 
-**\*\*FROM HERE, MAKE SURE THAT YOU ARE LOGGED IN AS `hadoop` USER WHEN RUNNING ALL THE COMMANDS\*\***<br>
+> [!WARNING]
+> From this point, log in as the `hadoop` user for all commands.
 
-#### Setup Password-less SSH Authentication<br>
-The  master node, `pi1` will use an SSH connection to connect to other nodes (`pi2`,`pi3`) with key-pair authentication. This will allow the master node to actively manage the cluster.<br>
-**\*\*Perform these steps on the master Pi until only until directed to do otherwise.\*\***
+### 1.8 Set up password-less SSH
 
-0. **Create SSH Directory (`~/.ssh`) if not exist and set suitable permission accordingly.** 
+The master node `pi1` uses SSH to connect to the other nodes (`pi2` and `pi3`). The connection uses a key pair. This lets the master node manage the cluster.
+
+> [!IMPORTANT]
+> Do these steps on the master Pi, until the text says to do otherwise.
+
+**Step 0.** Create the SSH directory `~/.ssh` if it does not exist. Set the permissions.
 ```bash
 mkdir ~/.ssh
 touch ~/.ssh/config
@@ -129,21 +178,19 @@ sudo chmod 700 ~/.ssh/
 sudo chmod 600 ~/.ssh/*
 ```
 
-1. **Public/Private Key Pair**<br>
-    Next, create an SSH key pair on the Pi using:
+**Step 1.** Create an SSH key pair.
 ```bash
 ssh-keygen -t rsa -b 4096
 ```
-When generating this key, leave the password field blank so your Hadoop user can communicate unprompted.
+Leave the password field empty. The `hadoop` user must connect without a prompt.
 
-2. Repeat SSH keygen on other nodes `pi2` and `pi3` while logging as `hadoop` user.
+**Step 2.** Do Step 1 again on `pi2` and `pi3`. Log in as the `hadoop` user.
 
-3. **SSH Aliases**<br>
-   On every Pi, while logging as `hadoop` user: <br>
-   Edit SSH config file using command below. 
+**Step 3.** Create SSH aliases. On every Pi, log in as the `hadoop` user and open the SSH config file.
 ```bash
 nano ~/.ssh/config
 ```
+
 File: `/home/hadoop/.ssh/config`
 ```
 Host pi1
@@ -158,86 +205,102 @@ Host pi3
 User hadoop
 Hostname 192.168.35.13
 ```
-4. Then use the following command on all Pis (including `pi1`) to copy the public keys into `pi1`'s authorized key list:
+
+**Step 4.** Copy the public key of each Pi to `pi1`. Do this on all Pis, including `pi1`.
 ```bash
 ssh-copy-id pi1
 ```
-5. Finally, you can copy `pi1`'s SSH configuration files to the rest of the Pi's using the following commands:<br>
-(*piX* below refer to `pi2` , `pi3`)
+
+**Step 5.** Copy the SSH files of `pi1` to the other Pis. In the command, `piX` is `pi2` or `pi3`.
 ```bash
 scp ~/.ssh/authorized_keys piX:~/.ssh/authorized_keys
 ```
 
-Now, we can SSH into any Pis from master without entering any password. Please double check this if it is working properly. <br>
+**Check:** Use SSH to connect from the master to each Pi. No password prompt must show.
 
-#### Java 8 Installation
-**\*\*Perform these steps on the master Pi until only until directed to do otherwise.\*\***<br>
-To install Java 8, download the tar package from the official website of Oracle. The OpenJDK-8 is an older version so it is not available in the Debian repository. [See more.](https://itslinuxfoss.com/install-openjdk-8-debian-12/)
+---
 
-**DOWNLOAD LINK (Linux ARM64 Compressed Archive) :** https://www.oracle.com/java/technologies/javase/javase8u211-later-archive-downloads.html#license-lightbox <br>
-Then, copy the tar package to worker nodes. (*piX* below refer to `pi2` , `pi3`)
+## Part 2: Install Java 8
+
+> [!IMPORTANT]
+> Do these steps on the master Pi, until the text says to do otherwise.
+
+OpenJDK 8 is an old version. The Debian repository does not have it. Download the tar package from the Oracle website instead. [More information](https://itslinuxfoss.com/install-openjdk-8-debian-12/)
+
+**Download link (Linux ARM64 Compressed Archive):** https://www.oracle.com/java/technologies/javase/javase8u211-later-archive-downloads.html#license-lightbox
+
+Copy the tar package to the worker nodes. In the command, `piX` is `pi2` or `pi3`.
 ```bash
 scp .\jdk-8u401-linux-aarch64.tar.gz piX:~/
 ```
-Repeat the steps below on each Pi.<br>
-1. Run the following commands after downloading the tar package:
+
+Do the steps below on each Pi.
+
+1. Install the package.
 ```bash
 sudo mkdir /usr/lib/jvm/
 sudo tar -zxvf jdk-8u401-linux-aarch64.tar.gz -C /usr/lib/jvm/
 sudo update-alternatives --install /usr/bin/java java /usr/lib/jvm/jdk1.8.0_401/bin/java 1
 ```
-2. Display Java version
+2. Show the Java version.
 ```bash
 java -version
 ```
-The output will be as below:
+The output is:
 ```
 java version "1.8.0_401"
 Java(TM) SE Runtime Environment (build 1.8.0_401-b10)
 Java HotSpot(TM) 64-Bit Server VM (build 25.401-b10, mixed mode)
 ```
-3. To set up the environmental variables, run `sudo nano /etc/profile.d/java.sh`
+3. Set the environment variables. Open the file with `sudo nano /etc/profile.d/java.sh` and add these lines.
 ```bash
 export PATH=$PATH:/usr/lib/jvm/jdk1.8.0_401/bin/
 export JAVA_HOME=/usr/lib/jvm/jdk1.8.0_401/
 ```
-4. Load the variables using:
+4. Load the variables.
 ```bash
 source /etc/profile.d/java.sh
 ```
-5. Then, run the following to check Java installation path, `JAVA_HOME`:
+5. Make sure that `JAVA_HOME` is correct.
 ```bash
 echo $JAVA_HOME
 ```
-Java 8 is completed!
+
+Java 8 is installed.
 
 ---
-## Hadoop 3.4.0 Installation 
 
-### Hadoop Single Node Installation (for master only, `pi1`)
-**\*\*Perform these steps on the master Pi until only until directed to do otherwise.\*\***<br>
-1. Download Apache Hadoop 3.4.0 binary-aarch64 from [Apache Hadoop website](https://hadoop.apache.org/releases.html) by using wget command as below: 
+## Part 3: Install and configure Hadoop 3.4.0
+
+### 3.1 Download Hadoop (master node `pi1` only)
+
+> [!IMPORTANT]
+> Do these steps on the master Pi, until the text says to do otherwise.
+
+1. Download the Apache Hadoop 3.4.0 binary (aarch64) from the [Apache Hadoop website](https://hadoop.apache.org/releases.html) with `wget`.
 ```bash
 wget https://dlcdn.apache.org/hadoop/common/hadoop-3.4.0/hadoop-3.4.0-aarch64.tar.gz
 ```
-_Note : Binary download URL above may be different if different version is used_
+   > [!NOTE]
+   > The download URL is different for other versions.
 
-2. Extract the file in `hadoop` user home directory, then delete the compressed file.
+2. Extract the file in the home directory of the `hadoop` user. Then delete the compressed file.
 ```bash
 tar -xzvf hadoop-3.4.0-aarch64.tar.gz
 rm hadoop-3.4.0-aarch64.tar.gz
 ```
-#### Configure Hadoop
-To get the HDFS up and running, we need to modify some configuration files.
-##### Set environment variables
-1. Add Hadoop binaries to your PATH. Edit `/home/hadoop/.profile` and add the following line:
+
+### 3.2 Set the environment variables
+
+1. Add the Hadoop binaries to `PATH`. Edit the file and add this line. Then you can run Hadoop commands from any directory.
+
 File: `/home/hadoop/.profile`
 ```shell
 PATH=/home/hadoop/hadoop-3.4.0/bin:/home/hadoop/hadoop-3.4.0/sbin:$PATH
 ```
-This will enable us to run hadoop commands without going into the hadoop bin and sbin directory!
 
-2. Add Hadoop to your PATH for the shell. Edit `.bashrc` and add the following lines:<br>
+2. Add Hadoop to `PATH` for the shell. Edit the `.bashrc` file and add these lines.
+
 File: `/home/hadoop/.bashrc`
 ```shell
 # path and options for java
@@ -257,21 +320,22 @@ export HADOOP_COMMON_LIB_NATIVE_DIR=$HADOOP_HOME/lib/native
 export HADOOP_CONF_DIR=$HADOOP_HOME/etc/hadoop
 export HADOOP_OPTS="-Djava.library.path=$HADOOP_HOME/lib/native"
 ```
-Then, source the `.bashrc` file to ensure it updates. 
+Load the `.bashrc` file again.
 ```bash
 source ~/.bashrc
 ```
 
-3. **Set the value of `JAVA_HOME` in `hadoop-env.sh`** <br>
-You'll have to scroll down to find the correct line. Uncomment the line and add the correct path of your JAVA installation path to the variable.
+3. Set `JAVA_HOME` in `hadoop-env.sh`. Scroll down to find the correct line. Remove the comment mark (`#`) from the line. Enter the path of your Java installation.
+
 File: `/home/hadoop/hadoop-3.4.0/etc/hadoop/hadoop-env.sh`
 ```shell
 export JAVA_HOME=/usr/lib/jvm/jdk1.8.0_401/
 ```
-##### Edit config files (`core-site.xml`,`hdfs-site.xml`)
 
-1. **Set NameNode location**<br>
-   Edit `~/hadoop/etc/hadoop/core-site.xml` file to set the NameNode location to **`pi1`*** on port 9000
+### 3.3 Edit the HDFS configuration files
+
+1. **Set the NameNode location.** Edit the `core-site.xml` file. Set the NameNode to `pi1` on port 9000.
+
 File: `~/hadoop-3.4.0/etc/hadoop/core-site.xml`
 
 ```xml
@@ -282,8 +346,9 @@ File: `~/hadoop-3.4.0/etc/hadoop/core-site.xml`
     </property>
 </configuration>
 ```
-2. **Set path for HDFS**<br>
-   Edit `hdfs-site.xml` to resemble the following configuration:
+
+2. **Set the HDFS paths.** Edit the `hdfs-site.xml` file to look like this.
+
 File: `~/hadoop-3.4.0/etc/hadoop/hdfs-site.xml`
 ```xml
 <configuration>
@@ -301,15 +366,15 @@ File: `~/hadoop-3.4.0/etc/hadoop/hdfs-site.xml`
     </property> 
 </configuration>
 ```
-The first property, `dfs.replication`, indicates how many times data is replicated in the cluster (Default is `3`). You can set `2` to have all the data duplicated on the two nodes. Don’t enter a value higher than the actual number of worker nodes.
+The `dfs.replication` property sets how many copies of each data block the cluster keeps. The default value is `3`. Set `2` to keep each block on two nodes. Do not set a value higher than the number of worker nodes.
 
-3. Then, inside of the `hadoop` home directory, create folders in each node (`pi1`,`pi2`,`pi3`) using:
+3. In the `hadoop` home directory on each node (`pi1`, `pi2` and `pi3`), create the HDFS folders.
 ```bash
 mkdir -p /home/hadoop/hdfs/{namenode,datanode}
 ```
 
-4. **Set YARN as Job Scheduler for MapReduce operations**<br>
-Edit the `mapred-site.xml` file, setting YARN as the default framework for MapReduce operations:
+4. **Set YARN as the framework for MapReduce.** Edit the `mapred-site.xml` file.
+
 File: `~/hadoop-3.4.0/etc/hadoop/mapred-site.xml`
 ```xml
 <configuration>
@@ -343,18 +408,22 @@ File: `~/hadoop-3.4.0/etc/hadoop/mapred-site.xml`
     </property>
 </configuration>
 ```
-_Note : If you're running on **single node**: (1) Format the HDFS, (2) `start-dfs.sh` and then you can start exploring HDFS._ 
 
-###  Hadoop Multi-Node Installation
-#### Configure YARN
-1. Edit `yarn-site.xml`, which contains the configuration options for YARN.<br>
-To configure the ResourceManager to use the CapacityScheduler for setting up queues (**`dev`** and **`prod`** queues), the following property need to be included:
+> [!NOTE]
+> For a **single-node** cluster: format the HDFS, run `start-dfs.sh`, and then you can use HDFS.
+
+### 3.4 Configure YARN (multi-node cluster)
+
+1. Edit the `yarn-site.xml` file. It has the YARN configuration options.
+
+   To use the CapacityScheduler for the queues (**`dev`** and **`prod`**), include this property.
 ```xml
 <property>
 	    <name>yarn.resourcemanager.scheduler.class</name>
 	    <value>org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler</value>
 </property>
 ```
+
 File: `~/hadoop-3.4.0/etc/hadoop/yarn-site.xml`
 ```xml
 <configuration>
@@ -426,101 +495,134 @@ File: `~/hadoop-3.4.0/etc/hadoop/yarn-site.xml`
 </configuration>
 ```
 
-_Note:_<br>
-Based on above properties, capacity of resource allocation of each queue is **`50%`**. We also define how much of our resources can be allocated to our queues at maximum. So, if one queue does not use all the resources allocated to it, then YARN will allocate those resources to the other queue. For example, `dev` queue will never use more than **`50%`** of the allocated resources in the system. However, YARN allows `prod` queue to use up to **`70%`** of the resource if `dev` queue is not used.
+> [!NOTE]
+> Each queue gets **`50%`** of the resources. The maximum capacity sets how much a queue can use. If one queue does not use its resources, YARN gives them to the other queue.
+>
+> - The `dev` queue never uses more than **`50%`** of the resources.
+> - The `prod` queue can use up to **`70%`** of the resources when the `dev` queue is not in use.
 
+2. Edit the `capacity-scheduler.xml` file. Copy the content of this [file](https://raw.githubusercontent.com/aimanamri/raspberry-pi4-hadoop-spark-cluster/main/config_files/capacity-scheduler.xml) exactly.
 
-2. Then, edit `capacity-scheduler.xml` by copying exactly as written in this [file](https://raw.githubusercontent.com/aimanamri/raspberry-pi4-hadoop-spark-cluster/main/config_files/capacity-scheduler.xml).<br>
 File: `~/hadoop-3.4.0/etc/hadoop/capacity-scheduler.xml`
 
-#### Configure Master and Workers
-**For the Master:**<br>
-Edit `~/hadoop-3.4.0/etc/hadoop/master` file.
+### 3.5 Set the master and the workers
+
+**Master:** Edit the `~/hadoop-3.4.0/etc/hadoop/master` file.
 ```
 pi1
 ```
 
-**For the Workers:**<br>
-Edit `~/hadoop-3.4.0/etc/hadoop/workers` file.
+**Workers:** Edit the `~/hadoop-3.4.0/etc/hadoop/workers` file.
 ```
 pi2
 pi3
 ```
-#### Duplicate Config Files on Each Node<br>
-1. SSH  into `pi2` and then `pi3` and run the following commands:
+
+### 3.6 Copy Hadoop to each node
+
+1. Use SSH to connect to `pi2` and then `pi3`. Run these commands.
 ```bash
 sudo mkdir hadoop-3.4.0
 sudo chown -R hadoop:hadoop hadoop-3.4.0/
 ```
-2. Copy the Hadoop config files to the worker nodes from master node:
+
+2. On the master node, copy the Hadoop files to the worker nodes.
 ```bash 
 for pi in pi2 pi3; do rsync -avxP ~/hadoop-3.4.0/ $pi:/home/hadoop/hadoop-3.4.0/; done
 ```
-#### Format HDFS
-To run for the first time, the HDFS needs to be formatted. Hence, run the following command on **master node, `pi1`**:<br>
-\**THIS WILL DELETE ALL DATA IN THE HDFS\**
+
+### 3.7 Format HDFS
+Format the HDFS the first time you start it. Run this command on the master node `pi1`.
+
+> [!CAUTION]
+> This command deletes all data in the HDFS.
+
 ```bash
 hdfs namenode -format
 ```
-Our Hadoop installation is now configured and ready to run!
 
-#### Run HDFS and YARN
-1. Run the following command to start the HDFS and the YARN:
+Hadoop is now configured.
+
+---
+
+## Part 4: Start HDFS and YARN
+
+1. Start HDFS and YARN.
 ```bash
 start-dfs.sh && start-yarn.sh
 ```
 
-2. Check that every process is running with the `jps` command on each node. On master node **pi1**, we should see the following (the PID number will be different):
+2. Run the `jps` command on each node. Make sure that all processes run.
+
+   On the master node **`pi1`**, the output is as follows. The PID numbers are different on your Pi.
 ```
 5733 Jps
 5623 ResourceManager
 5435 SecondaryNameNode
 5245 NameNode
 ```
-And on **pi2** and **pi3** we should see the following:
+   On **`pi2`** and **`pi3`**, the output is as follows.
 ```
 1538 DataNode
 1720 Jps
 1640 NodeManager
 ```
-3. To stop HDFS and YARN on master and worker nodes, run the following command from **pi1**:
+
+3. To stop HDFS and YARN on all nodes, run this command on `pi1`.
 ```bash
 stop-dfs.sh && stop-yarn.sh
 ```
-##### Monitor HDFS and YARN via web UI<br>
-- HDFS : http://pi1:9870
-- YARN :  http://pi1:8088  (default port: 8088)  
+
+### Monitor HDFS and YARN in the web UI
+
+| Service | Address |
+| --- | --- |
+| HDFS | http://pi1:9870 |
+| YARN | http://pi1:8088 |
+
 <p float="right">
   <img src="./img/HDFS_overview.png" width="350" /> 
   <img src="./img/HDFS_DataNode_info.png" width="350" /> 
   <img src="./img/YARN_web_ui.png" width="700" /> 
 </p>
-Now, we have a working Hadoop Cluster!
+
+The Hadoop cluster now works.
 
 ---
-## Spark 3.5.1 Installation 
-**\*\*The following steps only need to be performed on the master Pi, `pi1`\*\***<br>
-1. Download Apache Spark 3.5.1 binary from [Apache Spark website](https://spark.apache.org/downloads.html) by using wget command as below: 
+
+## Part 5: Install and configure Spark 3.5.1
+
+> [!IMPORTANT]
+> Do these steps on the master Pi `pi1` only.
+
+### 5.1 Download Spark
+
+1. Download the Apache Spark 3.5.1 binary from the [Apache Spark website](https://spark.apache.org/downloads.html) with `wget`.
 ```bash
 wget https://dlcdn.apache.org/spark/spark-3.5.1/spark-3.5.1-bin-hadoop3.tgz
 ```
-_Note : Binary download URL above may be different if different version is used_
+   > [!NOTE]
+   > The download URL is different for other versions.
 
-2. Extract the file in `hadoop` user home directory and rename the directory. Then, delete the compressed file.
+2. Extract the file in the home directory of the `hadoop` user and rename the directory. Then delete the compressed file.
 ```bash
 tar -xzvf spark-3.5.1-bin-hadoop3.tgz
 mv spark-3.5.1-bin-hadoop3 spark-3.5.1
 rm spark-3.5.1-bin-hadoop3.tgz
 ```
-### Set environment variables<br>
-1. Add Spark binaries to your PATH. Edit `/home/hadoop/.profile` and add the following line:
+
+### 5.2 Set the environment variables
+
+1. Add the Spark binaries to `PATH`. Edit the file and add these lines.
+
 File: `/home/hadoop/.profile`
 ```shell
 # add SPARK bin and sbin to the end of the line PATH variable
 PATH=/home/hadoop/spark-3.5.1/bin:/home/hadoop/spark-3.5.1/sbin:$PATH
 ```
 
-2. Add Hadoop to your PATH for the shell. Edit `.bashrc` and add the following lines:
+2. Add Spark to `PATH` for the shell. Edit the `.bashrc` file and add these lines.
+
 File: `/home/hadoop/.bashrc`
 ```shell
 # path and options for Spark
@@ -531,32 +633,31 @@ export PYSPARK_PYTHON=python3
 # add SPARK bin and sbin to the end of the line PATH variable
 export PATH=/home/hadoop/spark-3.5.1/bin:/home/hadoop/spark-3.5.1/sbin:$PATH
 ```
-Then, source the `.bashrc` file to ensure it updates. 
+Load the `.bashrc` file again.
 ```bash
 source ~/.bashrc
 ```
 
-### Configuring YARN for Spark
-1. **Configure Workers**<br>
-   Copy `workers.template` to `workers` file in `spark-3.5.1/conf` directory.
+### 5.3 Configure Spark for YARN
+
+1. **Set the workers.** In the `spark-3.5.1/conf` directory, copy `workers.template` to `workers`.
 ```bash 
 cp workers.template workers
-``` 
-Then, add the hostname/IP address of workers nodes at the end line inside `workers` file.<br>
+```
+Add the host name or IP address of each worker node at the end of the `workers` file.
+
 File: `/home/hadoop/spark-3.5.1/conf/workers`
 ```
 pi2
 pi3
 ```
 
-2. **Configure Memory Allocation**<br>
-For nodes with less than 4G RAM, the default configuration is not adequate and may trigger swapping and poor performance, or even the failure of application initialization due to lack of memory. See more [[2]](https://www.linode.com/docs/guides/install-configure-run-spark-on-top-of-hadoop-yarn-cluster/)
-
+2. **Set the memory.** The default configuration is not good enough for nodes with less than 4 GB of RAM. The node can swap memory, run slowly, or fail to start an application. [More information](https://www.linode.com/docs/guides/install-configure-run-spark-on-top-of-hadoop-yarn-cluster/)
 ```bash 
 cp spark-defaults.conf.template spark-defaults.conf
-``` 
+```
+Edit the `spark-defaults.conf` file and add these lines.
 
-- Edit `spark-defaults.conf` and add the following configurations.
 File: `/home/hadoop/spark-3.5.1/conf/spark-defaults.conf`
 ```
 spark.driver.memory 512m
@@ -564,9 +665,10 @@ spark.yarn.am.memory 512m
 spark.executor.memory 512m
 ```
 
-### Monitor Spark Applications
-1. Enable the Web UI of Spark to track your submitted jobs by editing `spark-defaults.conf` file.<br>
-Add the following lines.
+### 5.4 Monitor Spark applications
+
+1. Turn on the Spark web UI to follow your jobs. Edit the `spark-defaults.conf` file and add these lines.
+
 File: `/home/hadoop/spark-3.5.1/conf/spark-defaults.conf`
 ```
 spark.eventLog.enabled            true
@@ -576,21 +678,22 @@ spark.history.fs.logDirectory     hdfs://pi1:9000/spark-logs
 spark.history.fs.update.interval  10s
 spark.history.ui.port             18080
 ```
- If you specify a bigger interval, you will have some delay between what you see in the History Server and the real time status of your application. If you use a shorter interval, you will increase I/O on the HDFS.
+A long update interval causes a delay between the History Server and the real status of your application. A short update interval causes more I/O on the HDFS.
 
-2. Restart HDFS and YARN if stopped. Then, create the log directory in the HDFS:
+2. Start HDFS and YARN again if they are stopped. Then create the log directory in the HDFS.
 ```bash
 start-dfs.sh && start-yarn.sh
 ```
 ```bash
 hdfs dfs -mkdir /spark-logs
 ```
-3. Run the History Server, HDFS and YARN:
+
+3. Start the History Server.
 ```bash
 start-history-server.sh
 ```
 
-4. To ensure all required daemons, run `jps` command. The output should be as below:
+4. Run the `jps` command to make sure that all daemons run. The output is:
 ```
 7971 Jps
 7879 HistoryServer
@@ -599,26 +702,30 @@ start-history-server.sh
 7038 NameNode
 ```
 
-5. Run the Pi parallel processing job again to generate logs in the HDFS:
+5. Run the Pi parallel processing job again to create logs in the HDFS.
 ```bash
 spark-submit --class org.apache.spark.examples.SparkPi --master yarn --queue dev /home/hadoop/spark-3.5.1/examples/jars/spark-examples_2.12-3.5.1.jar 10 
 ```
-6. Access the History Server by navigating to http://pi1:18080 in a web browser:
 
-7. To stop all running daemons:
+6. Open the History Server in a web browser: http://pi1:18080
+
+7. To stop all daemons, run this command.
 ```bash
 stop-dfs.sh && stop-yarn.sh && stop-history-server.sh
 ```
 
-### Running the Spark Interactive Shell
-Ensure that HDFS and YARN are running. To confirm, run `jps` on each of the nodes.
+---
 
-As an example, we are going to use Titanic dataset.
-Download the CSV file using wget on another terminal:
+## Part 6: Run Spark jobs
+
+Make sure that HDFS and YARN run. Run `jps` on each node to check.
+
+### 6.1 Prepare the example data
+This example uses the Titanic data set. Download the CSV file in a new terminal.
 ```bash
 wget https://web.stanford.edu/class/archive/cs/cs109/cs109.1166/stuff/titanic.csv
 ```
-Then, upload it to HDFS directory and then confirm the file is already uploaded.
+Upload the file to the HDFS. Then make sure that the file is there.
 ```bash
 hdfs dfs -put ~/titanic.csv /titanic.csv
 ```
@@ -626,12 +733,13 @@ hdfs dfs -put ~/titanic.csv /titanic.csv
 hdfs dfs -ls /
 ```
 
-#### Using the Spark Shell (Scala)
-1. Start Spark shell.
+### 6.2 Use the Spark shell (Scala)
+
+1. Start the Spark shell.
 ```bash
 spark-shell --master yarn --queue dev --name APPLICATION_NAME_SCALA
 ```
-2. Loading Data
+2. Load the data.
 ```scala
 val df = spark.read.format("csv").option("header",true).option("separator",",").load("hdfs:///titanic.csv")
 ```
@@ -645,12 +753,13 @@ df.show(10,false)
 :q
 ```
 
-#### Using the PySpark (Python)
-1. Start PySpark shell.
+### 6.3 Use PySpark (Python)
+
+1. Start the PySpark shell.
 ```bash
 pyspark --master yarn --queue dev --name APPLICATION_NAME_PYSPARK
 ```
-2. Loading Data
+2. Load the data.
 ```python
 df = spark.read.format("csv").option("header",True).option("separator",",").load("hdfs:///titanic.csv")
 ```
@@ -665,11 +774,11 @@ df.show(10,False)
 exit()
 ```
 
-### Submit file as Spark Job/Application to the YARN Cluster<br>
-Here, I will show only for Python language. But, you can also run Scala and R script.
-#### Python
-1. Create Python file as `script.py`.
-2. Edit the file to run simple task..
+### 6.4 Submit a file as a Spark job to YARN
+This example uses Python. You can also run Scala and R scripts.
+
+1. Create a Python file named `script.py`.
+2. Edit the file to do a simple task.
 ```python
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col
@@ -697,12 +806,12 @@ transformed_df = remove_extra_spaces(df, "name")
 
 transformed_df.show()
 ```
-3. Submit Python script as Spark job. 
+3. Submit the Python script as a Spark job.
 ```bash
 spark-submit --master yarn --queue prod ~/script.py
 ```
 
-**Other examples to run Scala and R:**
+**Other examples (Scala and R):**
 ```bash
 # For Scala and Java, use run-example:
 ./bin/run-example SparkPi
@@ -710,14 +819,43 @@ spark-submit --master yarn --queue prod ~/script.py
 # For R examples, use spark-submit directly:
 ./bin/spark-submit examples/src/main/r/dataframe.R
 ```
+
 <img src="./img/YARN_spark_job_dev_queue_in_use.png" width="700" /> 
 <img src="./img/all_submitted_applications.png" width="700" /> 
 
-We now have a working Spark Cluster. Keep exploring!
+The Spark cluster now works. Continue to explore.
 
 ---
 
-## More Information
+## Quick reference
+
+| Task | Command | Run on |
+| --- | --- | --- |
+| Start HDFS and YARN | `start-dfs.sh && start-yarn.sh` | `pi1` |
+| Stop HDFS and YARN | `stop-dfs.sh && stop-yarn.sh` | `pi1` |
+| Start the History Server | `start-history-server.sh` | `pi1` |
+| Check the running processes | `jps` | each node |
+| List the HDFS root | `hdfs dfs -ls /` | any node |
+| Submit a job to the `dev` queue | `spark-shell --master yarn --queue dev` | `pi1` |
+| Submit a job to the `prod` queue | `spark-submit --master yarn --queue prod ~/script.py` | `pi1` |
+
+## Sources and more information
+
+**Sources**
+
+1. [How to Install and Set Up a 3-Node Hadoop Cluster](https://www.linode.com/docs/guides/how-to-install-and-set-up-hadoop-cluster/)
+2. [Running Spark on Top of a Hadoop YARN Cluster](https://www.linode.com/docs/guides/install-configure-run-spark-on-top-of-hadoop-yarn-cluster/)
+3. [Apache Hadoop Documentation](https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-common/ClusterSetup.html)
+4. [Apache Spark Documentation](https://spark.apache.org/docs/latest/)
+5. [Building a Raspberry Pi Hadoop / Spark Cluster](https://dev.to/awwsmm/building-a-raspberry-pi-hadoop-spark-cluster-8b2?fbclid=IwAR1jloBA6-6U3LhcxhkLT0Kq2Nx90YZjnCCIfT01SQSRs3mHHB87kt4AK4w)
+6. [Getting Started with Hadoop & Apache Spark](https://youtube.com/playlist?list=PLJlKGwy-7Ac6ASmzZPjonzYsV4vPELf0x&si=IWXPkhC_r7mNN7IX)
+7. [How to install hadoop cluster/multi node on ubuntu server 18.04](https://youtu.be/zGP0Uqm0SAo)
+8. [Hadoop : Capacity Scheduler](https://hadoop.apache.org/docs/stable/hadoop-yarn/hadoop-yarn-site/CapacityScheduler.html#:~:text=etc%2Fhadoop%2Fcapacity%2Dscheduler,children%20of%20the%20root%20queue.)
+
+**More information**
+
 - [HDFS Shell Documentation](https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-common/FileSystemShell.html)
 - [PySpark Documentation](https://spark.apache.org/docs/latest/api/python/index.html)
 - [Submitting Spark Applications](https://spark.apache.org/docs/latest/submitting-applications.html)
+
+**Art:** the hero and data-flow animations were made with [Pixelbolt](https://github.com/skulitom/Pixelbolt). The recipes are in [`assets/src`](./assets/src).
