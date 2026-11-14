@@ -24,13 +24,14 @@ Author: [Aiman Amri](https://www.linkedin.com/in/aiman-amri/) · Last updated: 1
 2. [What you need](#what-you-need)
 3. [Cluster plan](#cluster-plan)
 4. [Part 1: Prepare the Raspberry Pis](#part-1-prepare-the-raspberry-pis)
-5. [Part 2: Install Java 8](#part-2-install-java-8)
-6. [Part 3: Install and configure Hadoop 3.4.0](#part-3-install-and-configure-hadoop-340)
+5. [Part 2: Install Java 17](#part-2-install-java-17)
+6. [Part 3: Install and configure Hadoop 3.5.0](#part-3-install-and-configure-hadoop-350)
 7. [Part 4: Start HDFS and YARN](#part-4-start-hdfs-and-yarn)
-8. [Part 5: Install and configure Spark 3.5.1](#part-5-install-and-configure-spark-351)
+8. [Part 5: Install and configure Spark 4.3.0](#part-5-install-and-configure-spark-430)
 9. [Part 6: Run Spark jobs](#part-6-run-spark-jobs)
-10. [Quick reference](#quick-reference)
-11. [Sources and more information](#sources-and-more-information)
+10. [Part 7: Verify the cluster](#part-7-verify-the-cluster)
+11. [Quick reference](#quick-reference)
+12. [Sources and more information](#sources-and-more-information)
 
 ---
 
@@ -60,9 +61,11 @@ This guide does not use MapReduce, the Hadoop processing engine. It uses Spark, 
 | **Raspberry Pi 4** | 3 units. See the [data sheet](https://docs.rs-online.com/b1fb/0900766b816fa153.pdf). Each Pi needs its own power supply (minimum 5 V / 3 A DC or 5.1 V / 3 A DC). |
 | **Micro SD card** | 1 card for each Pi. You also need a micro SD card reader. |
 | **Ethernet cables** | Optional. Use them if you want a wired network. |
-| **Hadoop** | Version 3.4.0 |
-| **Spark** | Version 3.5.1 |
-| **Java** | Java 8 on each Pi. Java 8 or 11 (runtime) works. |
+| **Hadoop** | Version 3.5.0 |
+| **Spark** | Version 4.3.0 |
+| **Java** | Java 17 on each Pi. Hadoop 3.5.0 needs Java 17 for the daemons. Spark 4.3.0 supports Java 17, 21 and 25. |
+| **Python** | Python 3.11 or later, for PySpark. Run `python3 --version` to check. Ubuntu 22.04 has Python 3.10, which is too old. Use Ubuntu 24.04, Raspberry Pi OS Bookworm or Trixie, or do not use PySpark. |
+| **64-bit OS** | Raspberry Pi OS 64-bit or Ubuntu Server 64-bit (arm64) on each Pi. |
 
 ## Cluster plan
 
@@ -220,74 +223,105 @@ scp ~/.ssh/authorized_keys piX:~/.ssh/authorized_keys
 
 ---
 
-## Part 2: Install Java 8
+## Part 2: Install Java 17
+
+Hadoop 3.5.0 needs **Java 17** for the daemons. Spark 4.3.0 supports Java 17, 21 and 25. Use Java 17 on all Pis, so that both programs use the same Java.
 
 > [!IMPORTANT]
-> Do these steps on the master Pi, until the text says to do otherwise.
+> Do these steps on **each** Pi.
 
-OpenJDK 8 is an old version. The Debian repository does not have it. Download the tar package from the Oracle website instead. [More information](https://itslinuxfoss.com/install-openjdk-8-debian-12/)
-
-**Download link (Linux ARM64 Compressed Archive):** https://www.oracle.com/java/technologies/javase/javase8u211-later-archive-downloads.html#license-lightbox
-
-Copy the tar package to the worker nodes. In the command, `piX` is `pi2` or `pi3`.
+**Before you start:** make sure that the OS is 64-bit. The command must show `aarch64`.
 ```bash
-scp .\jdk-8u401-linux-aarch64.tar.gz piX:~/
+uname -m
 ```
 
-Do the steps below on each Pi.
+Choose the method for your OS.
 
-1. Install the package.
+| OS | Method |
+| --- | --- |
+| Raspberry Pi OS 64-bit **Bookworm** (Debian 12) | Method A: apt |
+| Ubuntu Server 64-bit **22.04 or 24.04** | Method A: apt |
+| Raspberry Pi OS 64-bit **Trixie** (Debian 13) | Method B: SDKMAN. The Trixie repository has Java 21 and 25, but not Java 17. |
+| Any other 64-bit OS | Method B: SDKMAN |
+
+> [!NOTE]
+> To find your Debian version, run `cat /etc/os-release`.
+
+### Method A: apt
+
+1. Install Java 17.
 ```bash
-sudo mkdir /usr/lib/jvm/
-sudo tar -zxvf jdk-8u401-linux-aarch64.tar.gz -C /usr/lib/jvm/
-sudo update-alternatives --install /usr/bin/java java /usr/lib/jvm/jdk1.8.0_401/bin/java 1
+sudo apt update
+sudo apt install -y openjdk-17-jdk
 ```
-2. Show the Java version.
+2. Show the Java version. The first line must show version 17.
 ```bash
 java -version
 ```
-The output is:
-```
-java version "1.8.0_401"
-Java(TM) SE Runtime Environment (build 1.8.0_401-b10)
-Java HotSpot(TM) 64-Bit Server VM (build 25.401-b10, mixed mode)
-```
-3. Set the environment variables. Open the file with `sudo nano /etc/profile.d/java.sh` and add these lines.
+3. Find the Java 17 installation path. On arm64, it is `/usr/lib/jvm/java-17-openjdk-arm64`.
 ```bash
-export PATH=$PATH:/usr/lib/jvm/jdk1.8.0_401/bin/
-export JAVA_HOME=/usr/lib/jvm/jdk1.8.0_401/
+readlink -f $(which java)
 ```
-4. Load the variables.
+4. If another Java version is the default, select Java 17.
 ```bash
-source /etc/profile.d/java.sh
-```
-5. Make sure that `JAVA_HOME` is correct.
-```bash
-echo $JAVA_HOME
+sudo update-alternatives --config java
 ```
 
-Java 8 is installed.
+In this guide, `JAVA_HOME` is `/usr/lib/jvm/java-17-openjdk-arm64`.
+
+### Method B: SDKMAN
+
+[SDKMAN](https://sdkman.io) installs Java for one user. Log in as the `hadoop` user on each Pi.
+
+1. Install the tools that SDKMAN needs.
+```bash
+sudo apt install -y curl zip unzip
+```
+2. Install SDKMAN and load it.
+```bash
+curl -s "https://get.sdkman.io" | bash
+source ~/.sdkman/bin/sdkman-init.sh
+```
+3. Show the Java versions that you can install. Find a Temurin (`-tem`) build of Java 17.
+```bash
+sdk list java
+```
+4. Install the version. Replace `<identifier>` with the identifier from the list, for example `17.0.xx-tem`. Use the **same identifier on every Pi**. Answer `Y` when SDKMAN asks if it must set the version as the default.
+```bash
+sdk install java <identifier>
+```
+5. Show the Java version. The first line must show version 17.
+```bash
+java -version
+```
+
+In this guide, `JAVA_HOME` is then `/home/hadoop/.sdkman/candidates/java/current`. **Use this path in place of `/usr/lib/jvm/java-17-openjdk-arm64` in all later steps.**
+
+> [!IMPORTANT]
+> Hadoop starts the daemons on the worker nodes through SSH. These SSH sessions do not load the SDKMAN setup from `.bashrc`. For this reason, you set `JAVA_HOME` in `hadoop-env.sh` in a later step. Do not skip that step.
+
+Java 17 is installed.
 
 ---
 
-## Part 3: Install and configure Hadoop 3.4.0
+## Part 3: Install and configure Hadoop 3.5.0
 
 ### 3.1 Download Hadoop (master node `pi1` only)
 
 > [!IMPORTANT]
 > Do these steps on the master Pi, until the text says to do otherwise.
 
-1. Download the Apache Hadoop 3.4.0 binary (aarch64) from the [Apache Hadoop website](https://hadoop.apache.org/releases.html) with `wget`.
+1. Download the Apache Hadoop 3.5.0 binary (aarch64) from the [Apache Hadoop website](https://hadoop.apache.org/releases.html) with `wget`.
 ```bash
-wget https://dlcdn.apache.org/hadoop/common/hadoop-3.4.0/hadoop-3.4.0-aarch64.tar.gz
+wget https://dlcdn.apache.org/hadoop/common/hadoop-3.5.0/hadoop-3.5.0-aarch64.tar.gz
 ```
    > [!NOTE]
    > The download URL is different for other versions.
 
 2. Extract the file in the home directory of the `hadoop` user. Then delete the compressed file.
 ```bash
-tar -xzvf hadoop-3.4.0-aarch64.tar.gz
-rm hadoop-3.4.0-aarch64.tar.gz
+tar -xzvf hadoop-3.5.0-aarch64.tar.gz
+rm hadoop-3.5.0-aarch64.tar.gz
 ```
 
 ### 3.2 Set the environment variables
@@ -296,7 +330,7 @@ rm hadoop-3.4.0-aarch64.tar.gz
 
 File: `/home/hadoop/.profile`
 ```shell
-PATH=/home/hadoop/hadoop-3.4.0/bin:/home/hadoop/hadoop-3.4.0/sbin:$PATH
+PATH=/home/hadoop/hadoop-3.5.0/bin:/home/hadoop/hadoop-3.5.0/sbin:$PATH
 ```
 
 2. Add Hadoop to `PATH` for the shell. Edit the `.bashrc` file and add these lines.
@@ -304,10 +338,10 @@ PATH=/home/hadoop/hadoop-3.4.0/bin:/home/hadoop/hadoop-3.4.0/sbin:$PATH
 File: `/home/hadoop/.bashrc`
 ```shell
 # path and options for java
-export JAVA_HOME=/usr/lib/jvm/jdk1.8.0_401/
+export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-arm64
 
 # path and options for Hadoop
-export HADOOP_HOME=/home/hadoop/hadoop-3.4.0
+export HADOOP_HOME=/home/hadoop/hadoop-3.5.0
 export PATH=$PATH:$HADOOP_HOME/bin:$HADOOP_HOME/sbin
 
 export HADOOP_INSTALL=$HADOOP_HOME
@@ -327,16 +361,16 @@ source ~/.bashrc
 
 3. Set `JAVA_HOME` in `hadoop-env.sh`. Scroll down to find the correct line. Remove the comment mark (`#`) from the line. Enter the path of your Java installation.
 
-File: `/home/hadoop/hadoop-3.4.0/etc/hadoop/hadoop-env.sh`
+File: `/home/hadoop/hadoop-3.5.0/etc/hadoop/hadoop-env.sh`
 ```shell
-export JAVA_HOME=/usr/lib/jvm/jdk1.8.0_401/
+export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-arm64
 ```
 
 ### 3.3 Edit the HDFS configuration files
 
 1. **Set the NameNode location.** Edit the `core-site.xml` file. Set the NameNode to `pi1` on port 9000.
 
-File: `~/hadoop-3.4.0/etc/hadoop/core-site.xml`
+File: `~/hadoop-3.5.0/etc/hadoop/core-site.xml`
 
 ```xml
 <configuration>
@@ -349,7 +383,7 @@ File: `~/hadoop-3.4.0/etc/hadoop/core-site.xml`
 
 2. **Set the HDFS paths.** Edit the `hdfs-site.xml` file to look like this.
 
-File: `~/hadoop-3.4.0/etc/hadoop/hdfs-site.xml`
+File: `~/hadoop-3.5.0/etc/hadoop/hdfs-site.xml`
 ```xml
 <configuration>
     <property>
@@ -361,7 +395,7 @@ File: `~/hadoop-3.4.0/etc/hadoop/hdfs-site.xml`
         <value>/home/hadoop/hdfs/namenode/</value>
     </property> 
     <property>
-		<name>dfs.datanode.name.dir</name>
+		<name>dfs.datanode.data.dir</name>
         <value>/home/hadoop/hdfs/datanode/</value>
     </property> 
 </configuration>
@@ -375,7 +409,7 @@ mkdir -p /home/hadoop/hdfs/{namenode,datanode}
 
 4. **Set YARN as the framework for MapReduce.** Edit the `mapred-site.xml` file.
 
-File: `~/hadoop-3.4.0/etc/hadoop/mapred-site.xml`
+File: `~/hadoop-3.5.0/etc/hadoop/mapred-site.xml`
 ```xml
 <configuration>
     <property>
@@ -395,15 +429,15 @@ File: `~/hadoop-3.4.0/etc/hadoop/mapred-site.xml`
         <value>HADOOP_MAPRED_HOME=$HADOOP_HOME</value>
     </property>
     <property>
-        <name>yarn.app.mapreduce.am.resource.memory-mb</name>
+        <name>yarn.app.mapreduce.am.resource.mb</name>
         <value>512</value>
     </property>
     <property>
-        <name>mapreduce.map.resource.memory-mb</name>
+        <name>mapreduce.map.memory.mb</name>
         <value>256</value>
     </property>
     <property>
-        <name>mapreduce.reduce.resource.memory-mb</name>
+        <name>mapreduce.reduce.memory.mb</name>
         <value>256</value>
     </property>
 </configuration>
@@ -416,15 +450,10 @@ File: `~/hadoop-3.4.0/etc/hadoop/mapred-site.xml`
 
 1. Edit the `yarn-site.xml` file. It has the YARN configuration options.
 
-   To use the CapacityScheduler for the queues (**`dev`** and **`prod`**), include this property.
-```xml
-<property>
-	    <name>yarn.resourcemanager.scheduler.class</name>
-	    <value>org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler</value>
-</property>
-```
+   > [!NOTE]
+   > The CapacityScheduler is the default scheduler in Hadoop 3.5.0, so you do not set `yarn.resourcemanager.scheduler.class`. You set the queues (**`dev`** and **`prod`**) in the `capacity-scheduler.xml` file in step 2.
 
-File: `~/hadoop-3.4.0/etc/hadoop/yarn-site.xml`
+File: `~/hadoop-3.5.0/etc/hadoop/yarn-site.xml`
 ```xml
 <configuration>
     <property>
@@ -433,7 +462,7 @@ File: `~/hadoop-3.4.0/etc/hadoop/yarn-site.xml`
     </property>
     <property>
         <name>yarn.nodemanager.env-whitelist</name>
-        <value>JAVA_HOME,HADOOP_COMMON_HOME,HADOOP_HDFS_HOME,HADOOP_CONF_DIR,CLASSPATH_PREPEND_DISTCACHE,HADOOP_YARN_HOME,HADOOP_MAPRED_HOME</value>
+        <value>JAVA_HOME,HADOOP_COMMON_HOME,HADOOP_HDFS_HOME,HADOOP_CONF_DIR,CLASSPATH_PREPEND_DISTCACHE,HADOOP_YARN_HOME,HADOOP_HOME,PATH,LANG,TZ,HADOOP_MAPRED_HOME</value>
     </property>
     <property>
         <name>yarn.acl.enable</name>
@@ -442,10 +471,6 @@ File: `~/hadoop-3.4.0/etc/hadoop/yarn-site.xml`
     <property>
         <name>yarn.resourcemanager.hostname</name>
         <value>pi1</value>
-    </property>
-    <property>
-        <name>yarn.nodemanager.aux-services</name>
-        <value>mapreduce_shuffle</value>
     </property>
     <property>
         <name>yarn.nodemanager.resource.memory-mb</name>
@@ -463,56 +488,19 @@ File: `~/hadoop-3.4.0/etc/hadoop/yarn-site.xml`
         <name>yarn.nodemanager.vmem-check-enabled</name>
         <value>false</value>
     </property>
-    <property>
-            <name>yarn.resourcemanager.scheduler.class</name>
-            <value>org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler</value>
-    </property>
-
-    <property>
-        <name>yarn.scheduler.capacity.root.queues</name>
-        <value>prod,dev</value>
-    </property>
-
-    <property>
-        <name>yarn.scheduler.capacity.prod.capacity</name>
-        <value>0.5</value>
-    </property>
-
-    <property>
-        <name>yarn.scheduler.capacity.dev.capacity</name>
-        <value>0.5</value>
-    </property>
-
-    <property>
-        <name>yarn.scheduler.capacity.dev.maximum-capacity</name>
-        <value>0.5</value>
-    </property>
-
-    <property>
-        <name>yarn.scheduler.capacity.prod.maximum-capacity</name>
-        <value>0.7</value>
-    </property>
 </configuration>
 ```
 
 > [!NOTE]
-> Each queue gets **`50%`** of the resources. The maximum capacity sets how much a queue can use. If one queue does not use its resources, YARN gives them to the other queue.
->
-> - The `dev` queue never uses more than **`50%`** of the resources.
-> - The `prod` queue can use up to **`70%`** of the resources when the `dev` queue is not in use.
+> The `capacity-scheduler.xml` file in step 2 gives **`70%`** of the resources to the `prod` queue and **`30%`** to the `dev` queue. A queue can use more than its share when the other queue does not use its resources.
 
 2. Edit the `capacity-scheduler.xml` file. Copy the content of this [file](https://raw.githubusercontent.com/aimanamri/raspberry-pi4-hadoop-spark-cluster/main/config_files/capacity-scheduler.xml) exactly.
 
-File: `~/hadoop-3.4.0/etc/hadoop/capacity-scheduler.xml`
+File: `~/hadoop-3.5.0/etc/hadoop/capacity-scheduler.xml`
 
-### 3.5 Set the master and the workers
+### 3.5 Set the workers
 
-**Master:** Edit the `~/hadoop-3.4.0/etc/hadoop/master` file.
-```
-pi1
-```
-
-**Workers:** Edit the `~/hadoop-3.4.0/etc/hadoop/workers` file.
+Edit the `~/hadoop-3.5.0/etc/hadoop/workers` file. The Hadoop helper scripts use this file to start the daemons on the worker nodes.
 ```
 pi2
 pi3
@@ -522,13 +510,13 @@ pi3
 
 1. Use SSH to connect to `pi2` and then `pi3`. Run these commands.
 ```bash
-sudo mkdir hadoop-3.4.0
-sudo chown -R hadoop:hadoop hadoop-3.4.0/
+sudo mkdir hadoop-3.5.0
+sudo chown -R hadoop:hadoop hadoop-3.5.0/
 ```
 
 2. On the master node, copy the Hadoop files to the worker nodes.
 ```bash 
-for pi in pi2 pi3; do rsync -avxP ~/hadoop-3.4.0/ $pi:/home/hadoop/hadoop-3.4.0/; done
+for pi in pi2 pi3; do rsync -avxP ~/hadoop-3.5.0/ $pi:/home/hadoop/hadoop-3.5.0/; done
 ```
 
 ### 3.7 Format HDFS
@@ -590,25 +578,25 @@ The Hadoop cluster now works.
 
 ---
 
-## Part 5: Install and configure Spark 3.5.1
+## Part 5: Install and configure Spark 4.3.0
 
 > [!IMPORTANT]
 > Do these steps on the master Pi `pi1` only.
 
 ### 5.1 Download Spark
 
-1. Download the Apache Spark 3.5.1 binary from the [Apache Spark website](https://spark.apache.org/downloads.html) with `wget`.
+1. Download the Apache Spark 4.3.0 binary from the [Apache Spark website](https://spark.apache.org/downloads.html) with `wget`.
 ```bash
-wget https://dlcdn.apache.org/spark/spark-3.5.1/spark-3.5.1-bin-hadoop3.tgz
+wget https://dlcdn.apache.org/spark/spark-4.3.0/spark-4.3.0-bin-hadoop3.tgz
 ```
    > [!NOTE]
    > The download URL is different for other versions.
 
 2. Extract the file in the home directory of the `hadoop` user and rename the directory. Then delete the compressed file.
 ```bash
-tar -xzvf spark-3.5.1-bin-hadoop3.tgz
-mv spark-3.5.1-bin-hadoop3 spark-3.5.1
-rm spark-3.5.1-bin-hadoop3.tgz
+tar -xzvf spark-4.3.0-bin-hadoop3.tgz
+mv spark-4.3.0-bin-hadoop3 spark-4.3.0
+rm spark-4.3.0-bin-hadoop3.tgz
 ```
 
 ### 5.2 Set the environment variables
@@ -618,7 +606,7 @@ rm spark-3.5.1-bin-hadoop3.tgz
 File: `/home/hadoop/.profile`
 ```shell
 # add SPARK bin and sbin to the end of the line PATH variable
-PATH=/home/hadoop/spark-3.5.1/bin:/home/hadoop/spark-3.5.1/sbin:$PATH
+PATH=/home/hadoop/spark-4.3.0/bin:/home/hadoop/spark-4.3.0/sbin:$PATH
 ```
 
 2. Add Spark to `PATH` for the shell. Edit the `.bashrc` file and add these lines.
@@ -626,12 +614,12 @@ PATH=/home/hadoop/spark-3.5.1/bin:/home/hadoop/spark-3.5.1/sbin:$PATH
 File: `/home/hadoop/.bashrc`
 ```shell
 # path and options for Spark
-export SPARK_HOME=/home/hadoop/spark-3.5.1
+export SPARK_HOME=/home/hadoop/spark-4.3.0
 export PATH=$PATH:$SPARK_HOME/bin
 export LD_LIBRARY_PATH=$HADOOP_HOME/lib/native:$LD_LIBRARY_PATH
 export PYSPARK_PYTHON=python3
 # add SPARK bin and sbin to the end of the line PATH variable
-export PATH=/home/hadoop/spark-3.5.1/bin:/home/hadoop/spark-3.5.1/sbin:$PATH
+export PATH=/home/hadoop/spark-4.3.0/bin:/home/hadoop/spark-4.3.0/sbin:$PATH
 ```
 Load the `.bashrc` file again.
 ```bash
@@ -640,17 +628,7 @@ source ~/.bashrc
 
 ### 5.3 Configure Spark for YARN
 
-1. **Set the workers.** In the `spark-3.5.1/conf` directory, copy `workers.template` to `workers`.
-```bash 
-cp workers.template workers
-```
-Add the host name or IP address of each worker node at the end of the `workers` file.
-
-File: `/home/hadoop/spark-3.5.1/conf/workers`
-```
-pi2
-pi3
-```
+1. **Make sure that Spark finds the YARN configuration.** Spark reads `HADOOP_CONF_DIR` to find the cluster. You set it in the `.bashrc` file in Part 3. You do not need the Spark `workers` file. Only the Spark standalone mode uses it.
 
 2. **Set the memory.** The default configuration is not good enough for nodes with less than 4 GB of RAM. The node can swap memory, run slowly, or fail to start an application. [More information](https://www.linode.com/docs/guides/install-configure-run-spark-on-top-of-hadoop-yarn-cluster/)
 ```bash 
@@ -658,18 +636,21 @@ cp spark-defaults.conf.template spark-defaults.conf
 ```
 Edit the `spark-defaults.conf` file and add these lines.
 
-File: `/home/hadoop/spark-3.5.1/conf/spark-defaults.conf`
+File: `/home/hadoop/spark-4.3.0/conf/spark-defaults.conf`
 ```
 spark.driver.memory 512m
 spark.yarn.am.memory 512m
 spark.executor.memory 512m
 ```
 
+> [!NOTE]
+> `spark.yarn.am.memory` applies in client mode. In cluster mode, Spark uses `spark.driver.memory`. Spark also adds memory overhead to each container. Each container is therefore larger than the value that you set. The container size must stay below `yarn.scheduler.maximum-allocation-mb` (1536 in this guide).
+
 ### 5.4 Monitor Spark applications
 
 1. Turn on the Spark web UI to follow your jobs. Edit the `spark-defaults.conf` file and add these lines.
 
-File: `/home/hadoop/spark-3.5.1/conf/spark-defaults.conf`
+File: `/home/hadoop/spark-4.3.0/conf/spark-defaults.conf`
 ```
 spark.eventLog.enabled            true
 spark.eventLog.dir                hdfs://pi1:9000/spark-logs
@@ -704,7 +685,7 @@ start-history-server.sh
 
 5. Run the Pi parallel processing job again to create logs in the HDFS.
 ```bash
-spark-submit --class org.apache.spark.examples.SparkPi --master yarn --queue dev /home/hadoop/spark-3.5.1/examples/jars/spark-examples_2.12-3.5.1.jar 10 
+spark-submit --class org.apache.spark.examples.SparkPi --master yarn --queue dev /home/hadoop/spark-4.3.0/examples/jars/spark-examples_2.13-4.3.0.jar 10 
 ```
 
 6. Open the History Server in a web browser: http://pi1:18080
@@ -824,6 +805,42 @@ spark-submit --master yarn --queue prod ~/script.py
 <img src="./img/all_submitted_applications.png" width="700" /> 
 
 The Spark cluster now works. Continue to explore.
+
+---
+
+## Part 7: Verify the cluster
+
+Do these checks in order. Stop at the first check that fails and correct the problem.
+
+> [!IMPORTANT]
+> Make sure that HDFS and YARN run. Do these checks on the master Pi `pi1` as the `hadoop` user, unless the text says to do otherwise.
+
+1. **Java.** The command must show version 17 on `pi1`, `pi2` and `pi3`.
+```bash
+for pi in pi1 pi2 pi3; do ssh $pi 'java -version 2>&1 | head -1'; done
+```
+2. **Hadoop.** The command must show Hadoop 3.5.0.
+```bash
+hadoop version | head -1
+```
+3. **Daemons.** Run `jps` on each node. See Part 4 for the expected output.
+4. **HDFS.** Write a file, read it back and delete it.
+```bash
+echo "hello hdfs" > /tmp/check.txt
+hdfs dfs -put /tmp/check.txt /check.txt
+hdfs dfs -cat /check.txt
+hdfs dfs -rm /check.txt
+```
+5. **YARN.** Run the Hadoop example job. It must complete without errors.
+```bash
+yarn jar ~/hadoop-3.5.0/share/hadoop/mapreduce/hadoop-mapreduce-examples-3.5.0.jar pi 2 10
+```
+6. **Spark.** Run the SparkPi example on YARN. The output must show a line that starts with `Pi is roughly 3.14`.
+```bash
+spark-submit --class org.apache.spark.examples.SparkPi --master yarn --queue dev /home/hadoop/spark-4.3.0/examples/jars/spark-examples_2.13-4.3.0.jar 10
+```
+
+If all checks pass, Java, Hadoop and Spark work together on your cluster.
 
 ---
 

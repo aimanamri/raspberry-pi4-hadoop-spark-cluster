@@ -113,10 +113,10 @@ if ! shopt -oq posix; then
 fi
 
 # path and options for java
-export JAVA_HOME=/usr/lib/jvm/jdk1.8.0_401/
+export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-arm64
 
 # path and options for Hadoop
-export HADOOP_HOME=/home/hadoop/hadoop-3.4.0
+export HADOOP_HOME=/home/hadoop/hadoop-3.5.0
 export PATH=$PATH:$HADOOP_HOME/bin:$HADOOP_HOME/sbin
 
 export HADOOP_INSTALL=$HADOOP_HOME
@@ -130,7 +130,7 @@ export HADOOP_CONF_DIR=$HADOOP_HOME/etc/hadoop
 export HADOOP_OPTS="-Djava.library.path=$HADOOP_HOME/lib/native"
 
 # path and options for Spark
-export SPARK_HOME=/home/hadoop/spark-3.5.1
+export SPARK_HOME=/home/hadoop/spark-4.3.0
 export PATH=$PATH:$SPARK_HOME/bin
 export LD_LIBRARY_PATH=$HADOOP_HOME/lib/native:$LD_LIBRARY_PATH
 export PYSPARK_PYTHON=python3

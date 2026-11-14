@@ -26,7 +26,7 @@
         <value>/home/hadoop/hdfs/namenode/</value>
     </property> 
     <property>
-		<name>dfs.datanode.name.dir</name>
+		<name>dfs.datanode.data.dir</name>
         <value>/home/hadoop/hdfs/datanode/</value>
     </property> 
 </configuration>
