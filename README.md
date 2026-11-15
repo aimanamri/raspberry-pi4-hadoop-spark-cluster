@@ -12,7 +12,7 @@
 <a href="https://github.com/aimanamri/raspberry-pi4-hadoop-spark-cluster/commits/main"><img alt="GitHub Last Commit" src="https://img.shields.io/github/last-commit/aimanamri/raspberry-pi4-hadoop-spark-cluster"></a>
 <a href="https://github.com/aimanamri/raspberry-pi4-hadoop-spark-cluster"><img alt="Repository Size" src="https://img.shields.io/github/repo-size/aimanamri/raspberry-pi4-hadoop-spark-cluster"></a>
 
-Author: [Aiman Amri](https://www.linkedin.com/in/aiman-amri/) · Last updated: 14/7/2024 01:47 GMT+8 · [Config files](https://github.com/aimanamri/raspberry-pi4-hadoop-spark-cluster/tree/main/config_files)
+Author: [Aiman Amri](https://www.linkedin.com/in/aiman-amri/) · Last updated: 15/11/2026 16:00 GMT+8 · [Config files](https://github.com/aimanamri/raspberry-pi4-hadoop-spark-cluster/tree/main/config_files)
 
 </div>
 
