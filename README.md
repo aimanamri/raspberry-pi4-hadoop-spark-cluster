@@ -548,7 +548,7 @@ File: `~/hadoop-3.5.0/etc/hadoop/yarn-site.xml`
 ```
 
 > [!NOTE]
-> The `capacity-scheduler.xml` file in step 2 gives **`70%`** of the resources to the `prod` queue and **`30%`** to the `dev` queue. A queue can use more than its share when the other queue does not use its resources.
+> The `capacity-scheduler.xml` file in step 2 gives **`70%`** of the resources to the `prod` queue and **`30%`** to the `dev` queue. A queue can use more than its share when the other queue does not use its resources. YARN can show a tiny rounding difference in the queue values, for example `30.000002`. This is normal.
 
 2. Edit the `capacity-scheduler.xml` file. Copy the content of this [file](https://raw.githubusercontent.com/aimanamri/raspberry-pi4-hadoop-spark-cluster/main/config_files/capacity-scheduler.xml) exactly.
 
@@ -802,6 +802,8 @@ df.show(10,false)
 ```bash
 pyspark --master yarn --queue dev --name APPLICATION_NAME_PYSPARK
 ```
+   > [!TIP]
+   > Type the commands in the shell. Do not pipe them into `pyspark`. In that mode, the shell does not create the `spark` object. To run commands from a file, use `spark-submit` (see 6.4).
 2. Load the data.
 ```python
 df = spark.read.format("csv").option("header",True).option("separator",",").load("hdfs:///titanic.csv")
