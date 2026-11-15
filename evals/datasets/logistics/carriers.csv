@@ -1,0 +1,7 @@
+carrier_id,carrier_name,mode
+C01,SwiftFreight,road
+C02,AirBridge,air
+C03,BlueWave,sea
+C04,IronRail,rail
+C05,QuickHaul,road
+C06,SkyCargo,air
