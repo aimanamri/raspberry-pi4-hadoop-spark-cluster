@@ -1,2 +1,5 @@
 # Logs and the summary table of each run
 results/
+
+# Recipes made by assets/src/build-recipes.mjs (run assets/src/render.sh to make them again)
+assets/src/*.pixel.json

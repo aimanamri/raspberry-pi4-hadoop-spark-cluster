@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./assets/hero.gif" alt="Pixel art animation. A data folder sends a job to a Raspberry Pi master node. The master sends work to two worker Pis. The PySpark, Scala, R and Spark icons bounce. A YARN panel shows the load, and at the end it shows PASS." width="100%" />
+</p>
+
 # Spark evals
 
 These evals prove that your cluster runs distributed Spark jobs. Each eval reads a CSV dataset from HDFS, cleans it, analyses it, and writes the results back to HDFS. Every eval prints the hosts that ran the work.
@@ -22,6 +26,10 @@ There are 10 datasets and 3 jobs for each dataset: PySpark, Spark Scala, and Spa
 
 ## Folder layout
 
+<p align="center">
+  <img src="./assets/01-folder-layout.gif" alt="Pixel art animation. A folder named evals opens. A runner script, a data folder, a jobs folder and a results folder come out of it." width="100%" />
+</p>
+
 ```text
 evals/
 ├── run-evals.sh            runner: upload, run, report
@@ -37,6 +45,10 @@ evals/
 ```
 
 ## Datasets and jobs
+
+<p align="center">
+  <img src="./assets/02-datasets-jobs.gif" alt="Pixel art animation. One CSV dataset sends data to three jobs: PySpark, Scala and R. All three jobs make the same result." width="100%" />
+</p>
 
 Each dataset has one large table (50 500 rows, 2 to 4 MB) and one small lookup table. About 1% of the rows are duplicates. Other rows have null values, bad dates, impossible numbers, or messy text. The jobs clean these rows first.
 
@@ -57,6 +69,10 @@ Each job writes 3 result tables to `hdfs:///evals-out/<domain>/<language>/<resul
 
 ## Requirements
 
+<p align="center">
+  <img src="./assets/03-requirements.gif" alt="Pixel art animation. A checklist shows Hadoop 3.5.0, Spark 4.3.0, Java 17 and Python 3.11. Each item gets a check mark. Then the cluster is ready." width="100%" />
+</p>
+
 - A running cluster from the main [README](../README.md): HDFS, YARN, and Spark 4.3.0 (`bin-hadoop3`) on the master node.
 - Run all commands on the **master node** (`pi1`), as the `hadoop` user.
 - Python 3.11 or later for the PySpark jobs. Spark 4.3 needs it.
@@ -69,6 +85,10 @@ Each job writes 3 result tables to `hdfs:///evals-out/<domain>/<language>/<resul
 - About 30 MB free disk space in the repository and about 100 MB in HDFS (replication 1).
 
 ## Quick start
+
+<p align="center">
+  <img src="./assets/04-quick-start.gif" alt="Pixel art animation. A terminal types the run-evals script. Then a progress bar fills while the PySpark, Scala and R jobs run." width="100%" />
+</p>
 
 1. Check the settings. The defaults match the main README (`pi1`, port 9000, queue `dev`).
    ```bash
@@ -95,6 +115,10 @@ Each job writes 3 result tables to `hdfs:///evals-out/<domain>/<language>/<resul
 
 ## Runner options
 
+<p align="center">
+  <img src="./assets/05-runner-options.gif" alt="Pixel art animation. Switches for the lang, domain and dry-run options turn on and off. The language boxes light up." width="100%" />
+</p>
+
 | Option | Meaning | Default |
 |---|---|---|
 | `--list` | Show the jobs and their dataset files. Run nothing. | |
@@ -114,6 +138,10 @@ The runner sets `spark.sql.files.maxPartitionBytes` to 512 KiB. A 3 MB file then
 The exit code is `0` when no job failed, `1` when a job failed or the languages disagree, and `2` for a usage or setup error.
 
 ## Run one job by hand
+
+<p align="center">
+  <img src="./assets/06-run-one-job.gif" alt="Pixel art animation. A terminal types the spark-submit command. A packet goes to a Raspberry Pi worker and the PySpark job runs." width="100%" />
+</p>
 
 Upload the data first. Replace `finance` with your domain.
 
@@ -155,6 +183,10 @@ For PySpark and R, you can use `--deploy-mode cluster`. The driver then runs on 
 
 ## Read the results
 
+<p align="center">
+  <img src="./assets/07-read-results.gif" alt="Pixel art animation. A results table gets check marks for each domain and each language. At the end it shows ALL PASS." width="100%" />
+</p>
+
 **On the console.** Each job prints 3 lines:
 
 ```text
@@ -183,6 +215,10 @@ To get a table on your laptop, use `hdfs dfs -get /evals-out/finance /tmp/financ
 
 ## Watch the jobs in the web UIs
 
+<p align="center">
+  <img src="./assets/08-monitoring.gif" alt="Pixel art animation. A YARN panel shows the load of three Pis. A live graph moves. A Spark UI panel shows a live job." width="100%" />
+</p>
+
 Open these pages in a browser on a computer in the same network. Replace `pi1` with your master host name or IP address.
 
 | UI | Address | What you see |
@@ -197,6 +233,10 @@ The runner prints the YARN address, the History Server address, and the applicat
 The History Server shows an application only after the application finishes and the event log is written (`spark.eventLog.enabled` is `true` in `config_files/spark-defaults.conf`).
 
 ## Notes on Scala and R
+
+<p align="center">
+  <img src="./assets/09-scala-and-r.gif" alt="Pixel art animation. The Scala icon and the R icon send job files to a terminal window. There is no build step." width="100%" />
+</p>
 
 **Scala.** A `spark-submit` run needs a jar, and compiling on a Raspberry Pi is slow. These evals use `spark-shell -i job.scala` instead. This route needs no compiler and no build tool. It has these limits:
 
@@ -221,6 +261,10 @@ If SparkR does not work on your build, the runner skips the R jobs with a clear 
 
 ## Expected run time
 
+<p align="center">
+  <img src="./assets/10-run-time.gif" alt="Pixel art animation. A clock turns while a progress bar fills. A Raspberry Pi works on a small data set. The run takes minutes." width="100%" />
+</p>
+
 These numbers are an estimate. They come from tests on a 3-container YARN cluster on an Apple silicon Mac (about 50 to 80 seconds for each job). They are **not measured on Raspberry Pis**.
 
 | Run | Mac, Docker (measured) | Raspberry Pi 4 (estimate) |
@@ -232,6 +276,10 @@ These numbers are an estimate. They come from tests on a 3-container YARN cluste
 Most of the time is for starting the JVMs and the YARN containers, not for the data. R and Scala need more start time than PySpark. Larger data (see [Make new data](#make-new-data)) makes the Pis slower in proportion.
 
 ## Troubleshooting
+
+<p align="center">
+  <img src="./assets/11-troubleshooting.gif" alt="Pixel art animation. A bug crawls and an error shows. Then a magnifying glass, a wrench and a check mark show the fix." width="100%" />
+</p>
 
 | Problem | Cause and fix |
 |---|---|
@@ -254,6 +302,10 @@ Most of the time is for starting the JVMs and the YARN containers, not for the d
 
 ## Make new data
 
+<p align="center">
+  <img src="./assets/12-make-new-data.gif" alt="Pixel art animation. A terminal runs generate.py. A new CSV table grows with more rows." width="100%" />
+</p>
+
 The generator uses only the Python standard library. The output is the same for the same options.
 
 ```bash
@@ -267,9 +319,17 @@ Run `./evals/run-evals.sh` again after you change the data. The runner uploads t
 
 ## What was tested
 
+<p align="center">
+  <img src="./assets/13-what-was-tested.gif" alt="Pixel art animation. Three container nodes get check marks one by one. The result is 30 jobs pass in Docker." width="100%" />
+</p>
+
 The sample data and all 30 jobs were run with these setups:
 
 - **Local mode**: all 30 jobs with `local[4]` in an Ubuntu 24.04 Docker container (OpenJDK 17, Python 3.12, R 4.3). The 3 languages gave the same summary and the same result tables for all 10 domains (30 result tables compared).
 - **YARN on Docker**: a 3-container cluster (1 master with NameNode, ResourceManager, and History Server; 2 workers with DataNode and NodeManager). It used the Hadoop 3.5.0 and Spark 4.3.0 downloads, and the `config_files/` of this repository, which has the `dev` and `prod` queues and 1536 MB per node.
 
 It was **not** tested on real Raspberry Pis. Check run time, memory, and the R and Scala jobs on your own cluster.
+
+---
+
+**Art:** the animations were made with [Pixelbolt](https://github.com/skulitom/Pixelbolt). The icons are small original pixel drawings, not the official logos. The generator script (`build-recipes.mjs`) and the render script (`render.sh`) are in [`assets/src`](./assets/src).
