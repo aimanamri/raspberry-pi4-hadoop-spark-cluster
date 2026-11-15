@@ -23,15 +23,16 @@ Author: [Aiman Amri](https://www.linkedin.com/in/aiman-amri/) · Last updated: 1
 1. [Overview](#overview)
 2. [What you need](#what-you-need)
 3. [Cluster plan](#cluster-plan)
-4. [Part 1: Prepare the Raspberry Pis](#part-1-prepare-the-raspberry-pis)
-5. [Part 2: Install Java 17](#part-2-install-java-17)
-6. [Part 3: Install and configure Hadoop 3.5.0](#part-3-install-and-configure-hadoop-350)
-7. [Part 4: Start HDFS and YARN](#part-4-start-hdfs-and-yarn)
-8. [Part 5: Install and configure Spark 4.3.0](#part-5-install-and-configure-spark-430)
-9. [Part 6: Run Spark jobs](#part-6-run-spark-jobs)
-10. [Part 7: Verify the cluster](#part-7-verify-the-cluster)
-11. [Quick reference](#quick-reference)
-12. [Sources and more information](#sources-and-more-information)
+4. [Automated setup with scripts (optional)](#automated-setup-with-scripts-optional)
+5. [Part 1: Prepare the Raspberry Pis](#part-1-prepare-the-raspberry-pis)
+6. [Part 2: Install Java 17](#part-2-install-java-17)
+7. [Part 3: Install and configure Hadoop 3.5.0](#part-3-install-and-configure-hadoop-350)
+8. [Part 4: Start HDFS and YARN](#part-4-start-hdfs-and-yarn)
+9. [Part 5: Install and configure Spark 4.3.0](#part-5-install-and-configure-spark-430)
+10. [Part 6: Run Spark jobs](#part-6-run-spark-jobs)
+11. [Part 7: Verify the cluster](#part-7-verify-the-cluster)
+12. [Quick reference](#quick-reference)
+13. [Sources and more information](#sources-and-more-information)
 
 ---
 
@@ -42,6 +43,9 @@ This project is my own record of learning distributed data storage, parallel pro
 You build a cluster of three Raspberry Pi 4 computers. You install HDFS on the cluster. You run Spark jobs through YARN. You can add more nodes later to make the cluster larger.
 
 This guide does not use MapReduce, the Hadoop processing engine. It uses Spark, because Spark is faster and easier to use.
+
+> [!TIP]
+> **You can automate these steps.** The [`scripts/`](./scripts) folder has Bash scripts that do Parts 1 to 7 for you. They detect Raspberry Pi OS or Ubuntu, and they read names, IP addresses and versions from one settings file. This guide shows every step by hand, so that you know what the scripts do. See [Automated setup with scripts](#automated-setup-with-scripts-optional).
 
 <p align="center">
   <img src="./assets/dataflow.gif" alt="Pixel art animation. A data file is split into blocks. The blocks go to three Raspberry Pi nodes and each block is copied to a second node. Each node processes its blocks and shows a partial result. The partial results join into one result." width="100%" />
@@ -86,6 +90,46 @@ This guide uses the names, addresses and ports in the tables below. If you use o
 
 ---
 
+## Automated setup with scripts (optional)
+
+You do not have to use the scripts. The steps in Parts 1 to 7 work without them. The scripts do the same steps and use the same files as this guide.
+
+**What the scripts do**
+- They detect the OS (Raspberry Pi OS, Ubuntu or Debian) and use the right commands for it.
+- They get all names, IP addresses, versions and memory sizes from one settings file, `scripts/.env`.
+- They check the SHA-512 checksum of each download.
+- You can run them again. They do not repeat finished work.
+
+**How to use them**
+
+1. Copy the settings file and change the values for your cluster.
+```bash
+cp scripts/.env.example scripts/.env
+nano scripts/.env
+```
+2. On **each** Pi, run the node setup script. It does Part 1.4 to 1.7 and Part 2.
+```bash
+sudo ./scripts/setup-node.sh
+```
+3. On the **master** Pi, log in as the `hadoop` user, get this repository and run the master scripts. They do Part 1.8, Parts 3 to 5 and Part 7.
+```bash
+./scripts/install-all.sh
+```
+
+| Script | Guide part |
+| --- | --- |
+| `setup-node.sh` (each Pi) | 1.4 to 1.7, Part 2 |
+| `setup-ssh.sh` (master) | 1.8 |
+| `install-hadoop.sh` (master) | Part 3 |
+| `start-cluster.sh` (master) | Part 4 |
+| `install-spark.sh` (master) | Part 5 |
+| `verify.sh` (master) | Part 7 |
+
+> [!NOTE]
+> The scripts do not set static IP addresses, write the SD cards or set up Wi-Fi. Do Parts 1.1 to 1.3 and 1.5 by hand. For all options and settings, see [`scripts/README.md`](./scripts/README.md).
+
+---
+
 ## Part 1: Prepare the Raspberry Pis
 
 ### 1.1 Build the hardware
@@ -118,6 +162,9 @@ In the Imager, set the host name and the SSH login on each Pi. This guide uses W
 </p>
 
 ### 1.4 Update the system
+
+> [!TIP]
+> **Script:** `sudo ./scripts/setup-node.sh` does steps 1.4, 1.6 and 1.7 and installs Java (Part 2).
 
 > [!IMPORTANT]
 > Do these steps on **each** Pi.
@@ -167,6 +214,9 @@ su - hadoop
 > From this point, log in as the `hadoop` user for all commands.
 
 ### 1.8 Set up password-less SSH
+
+> [!TIP]
+> **Script:** `./scripts/setup-ssh.sh` does this step. Run it on the master Pi.
 
 The master node `pi1` uses SSH to connect to the other nodes (`pi2` and `pi3`). The connection uses a key pair. This lets the master node manage the cluster.
 
@@ -224,6 +274,9 @@ scp ~/.ssh/authorized_keys piX:~/.ssh/authorized_keys
 ---
 
 ## Part 2: Install Java 17
+
+> [!TIP]
+> **Script:** `sudo ./scripts/setup-node.sh` does this part. It uses apt when the OS has Java 17 and SDKMAN when it does not.
 
 Hadoop 3.5.0 needs **Java 17** for the daemons. Spark 4.3.0 supports Java 17, 21 and 25. Use Java 17 on all Pis, so that both programs use the same Java.
 
@@ -305,6 +358,9 @@ Java 17 is installed.
 ---
 
 ## Part 3: Install and configure Hadoop 3.5.0
+
+> [!TIP]
+> **Script:** `./scripts/install-hadoop.sh` does this part. It writes the configuration files from the values in `scripts/.env`.
 
 ### 3.1 Download Hadoop (master node `pi1` only)
 
@@ -535,6 +591,9 @@ Hadoop is now configured.
 
 ## Part 4: Start HDFS and YARN
 
+> [!TIP]
+> **Script:** `./scripts/start-cluster.sh` starts HDFS, YARN and the Spark History Server. Use `--stop` to stop them.
+
 1. Start HDFS and YARN.
 ```bash
 start-dfs.sh && start-yarn.sh
@@ -579,6 +638,9 @@ The Hadoop cluster now works.
 ---
 
 ## Part 5: Install and configure Spark 4.3.0
+
+> [!TIP]
+> **Script:** `./scripts/install-spark.sh` does steps 5.1 to 5.3.
 
 > [!IMPORTANT]
 > Do these steps on the master Pi `pi1` only.
@@ -810,6 +872,9 @@ The Spark cluster now works. Continue to explore.
 
 ## Part 7: Verify the cluster
 
+> [!TIP]
+> **Script:** `./scripts/verify.sh` runs all of these checks and shows PASS or FAIL for each check.
+
 Do these checks in order. Stop at the first check that fails and correct the problem.
 
 > [!IMPORTANT]
@@ -833,7 +898,7 @@ hdfs dfs -rm /check.txt
 ```
 5. **YARN.** Run the Hadoop example job. It must complete without errors.
 ```bash
-yarn jar ~/hadoop-3.5.0/share/hadoop/mapreduce/hadoop-mapreduce-examples-3.5.0.jar pi 2 10
+yarn jar ~/hadoop-3.5.0/share/hadoop/mapreduce/hadoop-mapreduce-examples-3.5.0.jar pi -Dmapreduce.job.queuename=dev 2 10
 ```
 6. **Spark.** Run the SparkPi example on YARN. The output must show a line that starts with `Pi is roughly 3.14`.
 ```bash
@@ -852,6 +917,7 @@ If all checks pass, Java, Hadoop and Spark work together on your cluster.
 | Stop HDFS and YARN | `stop-dfs.sh && stop-yarn.sh` | `pi1` |
 | Start the History Server | `start-history-server.sh` | `pi1` |
 | Check the running processes | `jps` | each node |
+| Check the whole cluster | `./scripts/verify.sh` | `pi1` |
 | List the HDFS root | `hdfs dfs -ls /` | any node |
 | Submit a job to the `dev` queue | `spark-shell --master yarn --queue dev` | `pi1` |
 | Submit a job to the `prod` queue | `spark-submit --master yarn --queue prod ~/script.py` | `pi1` |
